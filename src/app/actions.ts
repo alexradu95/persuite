@@ -2,14 +2,12 @@
 import { NewCardRequest, Card as ICard, ExpensePolicy, Transaction } from "@/app/api/v1/data";
 import { randomDigits } from "@/lib/utils";
 import { useEffect, useState } from "react";
-import { useAuthContext } from "@/components/auth-context";
 import {useCopilotReadable} from "@copilotkit/react-core";
 
 export default function useCreditCards() {
     const [cards, setCards] = useState<ICard[]>([]);
     const [policies, setPolicies] = useState<ExpensePolicy[]>([]);
     const [transactions, setTransactions] = useState<Transaction[]>([]);
-    const { currentUser } = useAuthContext()
 
     const changePin = async ({ cardId, pin }: { cardId: string, pin: string }) => {
         try {

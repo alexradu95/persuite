@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useReducer } from "react";
-import { useCopilotAction, useCopilotReadable } from "@copilotkit/react-core";
+import { useCopilotAction } from "@copilotkit/react-core";
 import {
   CARD_COLORS,
   NewCardRequest,
