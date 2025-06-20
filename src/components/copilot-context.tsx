@@ -5,13 +5,19 @@ import { Button } from "./ui/button";
 import { usePathname } from "next/navigation";
 
 export enum Page {
-  Cards = "cards",
-  Dashboard = "dashboard",
   Wealth = "wealth",
 }
 
-export enum CardsPageOperations {
-  ChangePin = "change-pin",
+export enum WealthPageOperations {
+  AddInvestment = "add-investment",
+  EditInvestment = "edit-investment",
+  DeleteInvestment = "delete-investment",
+  AddCrypto = "add-crypto",
+  EditCrypto = "edit-crypto",
+  DeleteCrypto = "delete-crypto",
+  AddDeposit = "add-deposit",
+  EditDeposit = "edit-deposit",
+  DeleteDeposit = "delete-deposit",
 }
 
 // A component dedicated to adding readables/actions that are global to the app.
@@ -33,7 +39,7 @@ const CopilotContext = ({ children }: { children: React.ReactNode }) => {
     value: {
       pages: Object.values(Page),
       operations: {
-        [Page.Cards]: Object.values(CardsPageOperations),
+        [Page.Wealth]: Object.values(WealthPageOperations),
       },
       currentPage: pathname.split("/").pop() as Page,
     },
