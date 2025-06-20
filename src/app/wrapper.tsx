@@ -27,8 +27,8 @@ export function CopilotKitWrapper({ children }: { children: React.ReactNode }) {
           "You are assisting the user as best as you can. Answer in the best way possible given the data you have."
         }
         labels={{
-          title: "Bankito Assistant",
-          initial: "Hi, I'm the Bankito Copilot, built with copilotkit.  How can I help?  You can try one of these suggestions, or ask me anything.",
+          title: "Financial Assistant",
+          initial: "Hi, I'm your Financial Management Copilot. I can help you track investments, crypto, bank deposits, manage your income, and analyze your financial data. How can I assist you today?",
         }}
       />
     </CopilotKit>

@@ -6,6 +6,7 @@ import { usePathname } from "next/navigation";
 
 export enum Page {
   Wealth = "wealth",
+  Income = "income",
 }
 
 export enum WealthPageOperations {
@@ -18,6 +19,13 @@ export enum WealthPageOperations {
   AddDeposit = "add-deposit",
   EditDeposit = "edit-deposit",
   DeleteDeposit = "delete-deposit",
+}
+
+export enum IncomePageOperations {
+  AddWorkDay = "add-work-day",
+  EditWorkDay = "edit-work-day",
+  DeleteWorkDay = "delete-work-day",
+  ViewMonthlyReport = "view-monthly-report",
 }
 
 // A component dedicated to adding readables/actions that are global to the app.
@@ -40,6 +48,7 @@ const CopilotContext = ({ children }: { children: React.ReactNode }) => {
       pages: Object.values(Page),
       operations: {
         [Page.Wealth]: Object.values(WealthPageOperations),
+        [Page.Income]: Object.values(IncomePageOperations),
       },
       currentPage: pathname.split("/").pop() as Page,
     },
@@ -53,18 +62,11 @@ const CopilotContext = ({ children }: { children: React.ReactNode }) => {
   useCopilotAction({
     name: "navigateToPageAndPerform",
     description: `
-            Navigate to a page to perform an operation. Use this if you are asked to perform an action outside of page context. For example:
-            The user is viewing a dashboard but asks to make changes to a credit card or wealth data.
+            Navigate to the appropriate page to perform operations:
+            - Wealth page: Adding, editing, or deleting investments, managing cryptocurrency holdings and staking, updating bank deposits and interest rates
+            - Income page: Adding work days, editing hourly rates, viewing monthly income reports, calculating earnings
             
-            If you are on the cards page for example, and are requested to perform a card related operation, you are allowed to perform it.
-            
-            If the operation is unavailable, tell the user to navigate themselves to the page.
-            Let them know which page that is.
-            Advise them to re-ask co-pilot once they arrive at the right page.
-            You can suggest making the navigation part yourself
-            Example: "Adding new card is not available in this page. Navigate to "Cards" page and try to ask me again there. Would you like me to take you there?"
-            
-            Otherwise, initiate the navigation without asking
+            If the user requests operations not available on the current page, navigate them to the correct page.
         `,
     parameters: [
       {
@@ -72,7 +74,7 @@ const CopilotContext = ({ children }: { children: React.ReactNode }) => {
         type: "string",
         description: "The page in which to perform the operation",
         required: true,
-        enum: ["/cards", "/dashboard", "/wealth", "/"],
+        enum: ["/wealth", "/income", "/"],
       },
       {
         name: "operation",

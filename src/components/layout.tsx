@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { PiggyBank, TrendingUp } from "lucide-react";
+import { PiggyBank, TrendingUp, Calendar } from "lucide-react";
 
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
@@ -33,17 +33,10 @@ export function LayoutComponent({ children }: LayoutProps) {
   useCopilotChatSuggestions({
     instructions: `
       You have access to where the user is in the app from copilotkit readables.
-      The user is using a wealth management application. Suggest prompts related to wealth management like:
-      - "Update my stock investments to $30,000"
-      - "Show me my crypto portfolio breakdown" 
-      - "What's my total net worth?"
-      - "Increase my savings account by $5,000"
-      - "Add a new ETF investment"
-      - "Enable staking for my Ethereum"
-      - "Analyze my portfolio allocation"
-      - "What percentage of my wealth is in crypto?"
-      - "Show me my investment performance"
-      - "Update my bank deposit interest rates"
+      The user is using a wealth and income management application. Suggest prompts based on the current page:
+      - If on wealth page: "Update my stock investments to $30,000", "Show me my crypto portfolio breakdown", "What's my total net worth?", "Add a new ETF investment"
+      - If on income page: "Add a work day for today with 8 hours at $25/hour", "Show me this month's total earnings", "What's my average hourly rate?", "Calculate my projected monthly income"
+      - General prompts: "Analyze my financial overview", "Compare my income vs investments", "Show me my financial trends"
     `,
     minSuggestions: 3,
     maxSuggestions: 3,
@@ -59,6 +52,7 @@ export function LayoutComponent({ children }: LayoutProps) {
         </Link>
         <nav className="flex flex-1 flex-col items-center space-y-6">
           <NavItem href="/wealth" icon={PiggyBank} label="Wealth Management" />
+          <NavItem href="/income" icon={Calendar} label="Income Tracking" />
         </nav>
         <div className="flex flex-col items-center space-y-4">
           <ThemeToggle />
@@ -66,7 +60,7 @@ export function LayoutComponent({ children }: LayoutProps) {
       </aside>
       <div className="flex flex-1 flex-col overflow-hidden">
         <header className="flex h-16 items-center justify-between border-b px-4 md:px-6">
-          <h1 className="text-2xl font-bold">Wealth Management - Hello, {currentUser.name}</h1>
+          <h1 className="text-2xl font-bold">Financial Manager - Hello, {currentUser.name}</h1>
         </header>
         <main className="flex-1 overflow-y-auto">{children}</main>
       </div>
