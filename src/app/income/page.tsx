@@ -1,7 +1,7 @@
 'use client'
 import { useState, useMemo } from "react";
 import { Button, Input, Label } from "@/components/atoms";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle, Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/molecules";
+import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, InfoCard } from "@/components/molecules";
 import { useCopilotReadable, useCopilotAction } from "@copilotkit/react-core";
 
 interface WorkDay {
@@ -412,61 +412,43 @@ Potential earnings if all weekdays worked: €${weekdays.length * 8 * 37} (${(we
         </select>
       </div>
 
-      {/* Monthly Summary Cards - Brutalist Style */}
+      {/* Monthly Summary Cards */}
       <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-4 md:gap-6">
-        <div className="card-brutal bg-yellow">
-          <div className="card-brutal-header">
-            <h3 className="card-brutal-title text-sm">💰 Total Earnings</h3>
-          </div>
-          <div className="card-brutal-content">
-            <div className="text-3xl font-black mb-2">€{currentMonthData.totalEarnings.toFixed(2)}</div>
-            <div className="text-sm font-bold opacity-80 mb-1">
-              {convertCurrency(currentMonthData.totalEarnings).ron.toFixed(2)} RON
-            </div>
-            <div className="text-sm font-bold opacity-80 mb-2">
-              ${convertCurrency(currentMonthData.totalEarnings).usd.toFixed(2)} USD
-            </div>
-            <p className="text-xs font-bold uppercase tracking-wide">
-              {currentMonthData.workDaysCount} work days
-            </p>
-          </div>
-        </div>
+        <InfoCard
+          title="Total Earnings"
+          icon="💰"
+          value={`€${currentMonthData.totalEarnings.toFixed(2)}`}
+          subValues={[
+            { value: convertCurrency(currentMonthData.totalEarnings).ron.toFixed(2), label: "RON" },
+            { value: `$${convertCurrency(currentMonthData.totalEarnings).usd.toFixed(2)}`, label: "USD" }
+          ]}
+          subtitle={`${currentMonthData.workDaysCount} work days`}
+          color="yellow"
+        />
 
-        <div className="card-brutal bg-blue">
-          <div className="card-brutal-header">
-            <h3 className="card-brutal-title text-sm">⏰ Total Hours</h3>
-          </div>
-          <div className="card-brutal-content">
-            <div className="text-3xl font-black mb-2">{currentMonthData.totalHours}</div>
-            <p className="text-xs font-bold uppercase tracking-wide opacity-80">
-              hours worked this month
-            </p>
-          </div>
-        </div>
+        <InfoCard
+          title="Total Hours"
+          icon="⏰"
+          value={currentMonthData.totalHours}
+          subtitle="hours worked this month"
+          color="blue"
+        />
 
-        <div className="card-brutal bg-green">
-          <div className="card-brutal-header">
-            <h3 className="card-brutal-title text-sm">📈 Average Rate</h3>
-          </div>
-          <div className="card-brutal-content">
-            <div className="text-3xl font-black mb-2">€{currentMonthData.averageHourlyRate.toFixed(2)}</div>
-            <p className="text-xs font-bold uppercase tracking-wide opacity-80">
-              per hour average
-            </p>
-          </div>
-        </div>
+        <InfoCard
+          title="Average Rate"
+          icon="📈"
+          value={`€${currentMonthData.averageHourlyRate.toFixed(2)}`}
+          subtitle="per hour average"
+          color="green"
+        />
 
-        <div className="card-brutal bg-purple">
-          <div className="card-brutal-header">
-            <h3 className="card-brutal-title text-sm">📅 Work Days</h3>
-          </div>
-          <div className="card-brutal-content">
-            <div className="text-3xl font-black mb-2">{currentMonthData.workDaysCount}</div>
-            <p className="text-xs font-bold uppercase tracking-wide opacity-80">
-              days this month
-            </p>
-          </div>
-        </div>
+        <InfoCard
+          title="Work Days"
+          icon="📅"
+          value={currentMonthData.workDaysCount}
+          subtitle="days this month"
+          color="purple"
+        />
       </div>
 
       {/* Calendar - Brutalist Style */}

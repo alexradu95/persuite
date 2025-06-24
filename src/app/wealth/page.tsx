@@ -1,8 +1,8 @@
 'use client'
 import { useState, useMemo } from "react";
 import { Button, Input, Label } from "@/components/atoms";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle, Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/molecules";
-import { useCopilotReadable, useCopilotAction } from "@copilotkit/react-core";
+import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, InfoCard } from "@/components/molecules";
+import { useCopilotReadable } from "@copilotkit/react-core";
 
 interface Asset {
   id: string;
@@ -165,53 +165,37 @@ export default function WealthPage() {
 
       {/* Wealth Summary Cards */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 md:gap-6">
-        <div className="card-brutal bg-green">
-          <div className="card-brutal-header">
-            <h3 className="card-brutal-title text-sm">💰 Total Assets</h3>
-          </div>
-          <div className="card-brutal-content">
-            <div className="text-3xl font-black mb-2">€{wealthData.totalAssets.toLocaleString()}</div>
-            <p className="text-xs font-bold uppercase tracking-wide opacity-80">
-              {assets.length} assets tracked
-            </p>
-          </div>
-        </div>
+        <InfoCard
+          title="Total Assets"
+          icon="💰"
+          value={`€${wealthData.totalAssets.toLocaleString()}`}
+          subtitle={`${assets.length} assets tracked`}
+          color="green"
+        />
 
-        <div className="card-brutal bg-red">
-          <div className="card-brutal-header">
-            <h3 className="card-brutal-title text-sm">💸 Total Liabilities</h3>
-          </div>
-          <div className="card-brutal-content">
-            <div className="text-3xl font-black mb-2">€{wealthData.totalLiabilities.toLocaleString()}</div>
-            <p className="text-xs font-bold uppercase tracking-wide opacity-80">
-              {liabilities.length} debts tracked
-            </p>
-          </div>
-        </div>
+        <InfoCard
+          title="Total Liabilities"
+          icon="💸"
+          value={`€${wealthData.totalLiabilities.toLocaleString()}`}
+          subtitle={`${liabilities.length} debts tracked`}
+          color="red"
+        />
 
-        <div className={`card-brutal ${wealthData.netWorth >= 0 ? 'bg-blue' : 'bg-red'}`}>
-          <div className="card-brutal-header">
-            <h3 className="card-brutal-title text-sm">📊 Net Worth</h3>
-          </div>
-          <div className="card-brutal-content">
-            <div className="text-3xl font-black mb-2">€{wealthData.netWorth.toLocaleString()}</div>
-            <p className="text-xs font-bold uppercase tracking-wide opacity-80">
-              {wealthData.netWorth >= 0 ? 'positive equity' : 'negative equity'}
-            </p>
-          </div>
-        </div>
+        <InfoCard
+          title="Net Worth"
+          icon="📊"
+          value={`€${wealthData.netWorth.toLocaleString()}`}
+          subtitle={wealthData.netWorth >= 0 ? 'positive equity' : 'negative equity'}
+          color={wealthData.netWorth >= 0 ? 'blue' : 'red'}
+        />
 
-        <div className="card-brutal bg-purple">
-          <div className="card-brutal-header">
-            <h3 className="card-brutal-title text-sm">📈 Asset Growth</h3>
-          </div>
-          <div className="card-brutal-content">
-            <div className="text-3xl font-black mb-2">+5.2%</div>
-            <p className="text-xs font-bold uppercase tracking-wide opacity-80">
-              last 30 days (sample)
-            </p>
-          </div>
-        </div>
+        <InfoCard
+          title="Asset Growth"
+          icon="📈"
+          value="+5.2%"
+          subtitle="last 30 days (sample)"
+          color="purple"
+        />
       </div>
 
       {/* Assets Section */}
