@@ -174,7 +174,7 @@ export default function IncomePage() {
 
     // Empty cells for days before the first day of the month
     for (let i = 0; i < firstDay; i++) {
-      days.push(<div key={`empty-${i}`} className="calendar-cell" style={{visibility: 'hidden'}}></div>);
+      days.push(<div key={`empty-${i}`} className="aspect-square flex flex-col items-center justify-center border-[3px] border-black bg-white min-h-[60px] p-2" style={{visibility: 'hidden'}}></div>);
     }
 
     // Days of the month
@@ -187,17 +187,25 @@ export default function IncomePage() {
         <div
           key={day}
           onClick={() => handleDayClick(day)}
-          className={`calendar-cell group ${isWork ? 'is-work-day' : ''}`}
+          className={`aspect-square flex flex-col items-center justify-center border-[3px] border-black cursor-pointer transition-all duration-200 font-black min-h-[60px] p-2 relative group ${
+            isWork 
+              ? 'bg-emerald-500 text-white' 
+              : 'bg-white hover:bg-amber-400 hover:-translate-x-0.5 hover:-translate-y-0.5'
+          }`}
+          style={{
+            boxShadow: isWork ? '6px 6px 0px #000000' : '4px 4px 0px #000000',
+            fontFamily: 'Arial Black, Arial, sans-serif'
+          }}
         >
-          <span className="day-number">{day}</span>
+          <span className="font-black text-lg mb-1">{day}</span>
           {workDayData && (
-            <span className="earnings">€{workDayData.dailyEarnings}</span>
+            <span className="text-xs font-bold opacity-80">€{workDayData.dailyEarnings}</span>
           )}
           {!isWork && (
             <Button
               size="sm"
               variant="ghost"
-              className="absolute top-0 right-0 w-4 h-4 p-0 opacity-0 group-hover:opacity-100 hover:bg-blue hover:text-white text-xs border-none shadow-none"
+              className="absolute top-0 right-0 w-4 h-4 p-0 opacity-0 group-hover:opacity-100 hover:bg-blue-500 hover:text-white text-xs border-none shadow-none"
               onClick={(e) => handleQuickAdd(day, e)}
               title="Quick add: 8h at €37/hour"
             >
@@ -452,27 +460,42 @@ Potential earnings if all weekdays worked: €${weekdays.length * 8 * 37} (${(we
       </div>
 
       {/* Calendar - Brutalist Style */}
-      <div className="card-brutal">
-        <div className="card-brutal-header">
-          <h2 className="card-brutal-title">{monthNames[selectedMonth]} {selectedYear}</h2>
+      <div 
+        className="bg-white border-[5px] border-black p-6 relative text-black"
+        style={{ boxShadow: '6px 6px 0px #000000' }}
+      >
+        <div className="flex justify-between items-center mb-4 pb-3 border-b-[3px] border-black">
+          <h2 
+            className="font-black text-lg uppercase tracking-wide m-0"
+            style={{ fontFamily: 'Arial Black, Arial, sans-serif' }}
+          >
+            {monthNames[selectedMonth]} {selectedYear}
+          </h2>
         </div>
-        <div className="card-brutal-content">
+        <div className="mt-4">
           <p className="text-sm font-bold mb-4 uppercase tracking-wide">
             Click on any day to add or edit work hours. Green days indicate work days.
             Hover over free days to see the quick add button (⚡) for 8h at €37/hour.
           </p>
           
           {/* Calendar Header */}
-          <div className="calendar-header">
+          <div className="grid grid-cols-7 gap-2 mb-3 px-4">
             {['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'].map(day => (
-              <div key={day} className="calendar-header-day">
+              <div 
+                key={day} 
+                className="text-center font-black text-sm uppercase tracking-wide p-2 bg-black text-white border-[3px] border-black"
+                style={{ fontFamily: 'Arial Black, Arial, sans-serif' }}
+              >
                 {day}
               </div>
             ))}
           </div>
           
           {/* Calendar Grid */}
-          <div className="calendar-grid">
+          <div 
+            className="grid grid-cols-7 gap-2 p-4 bg-gray-100 border-[5px] border-black"
+            style={{ boxShadow: '6px 6px 0px #000000' }}
+          >
             {renderCalendar()}
           </div>
         </div>

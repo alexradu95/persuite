@@ -19,9 +19,9 @@ interface StatsGridProps {
 const StatsGrid = React.forwardRef<HTMLDivElement, StatsGridProps>(
   ({ stats, columns = 4, className = "" }, ref) => {
     const gridClasses = {
-      2: "grid-2",
-      3: "grid-3", 
-      4: "grid-4",
+      2: "grid grid-cols-2",
+      3: "grid grid-cols-3", 
+      4: "grid grid-cols-4",
     }
     
     const classes = `${gridClasses[columns]} gap-4 ${className}`
@@ -34,7 +34,7 @@ const StatsGrid = React.forwardRef<HTMLDivElement, StatsGridProps>(
             variant="colored" 
             color={stat.color || "yellow"}
             hover
-            className="transition-fast"
+            className="transition-all duration-200"
           >
             <CardHeader className="pb-3">
               <CardTitle className="text-sm">{stat.label}</CardTitle>

@@ -199,19 +199,31 @@ export default function WealthPage() {
       </div>
 
       {/* Assets Section */}
-      <div className="card-brutal">
-        <div className="card-brutal-header">
-          <h2 className="card-brutal-title">Assets</h2>
-          <Button onClick={handleAddAsset} className="bg-green text-white hover:bg-black">
+      <div 
+        className="bg-white border-[5px] border-black p-6 relative text-black"
+        style={{ boxShadow: '6px 6px 0px #000000' }}
+      >
+        <div className="flex justify-between items-center mb-4 pb-3 border-b-[3px] border-black">
+          <h2 
+            className="font-black text-lg uppercase tracking-wide m-0"
+            style={{ fontFamily: 'Arial Black, Arial, sans-serif' }}
+          >
+            Assets
+          </h2>
+          <Button onClick={handleAddAsset} className="bg-emerald-500 text-white hover:bg-black">
             + Add Asset
           </Button>
         </div>
-        <div className="card-brutal-content">
+        <div className="mt-4">
           <div className="grid gap-4">
             {assets.map((asset) => {
               const typeInfo = getAssetTypeInfo(asset.type);
               return (
-                <div key={asset.id} className="flex items-center justify-between p-4 border-3 border-black bg-white hover:bg-gray-100 transition-fast">
+                <div 
+                  key={asset.id} 
+                  className="flex items-center justify-between p-4 border-[3px] border-black bg-white hover:bg-gray-100 transition-all duration-200"
+                  style={{ boxShadow: '4px 4px 0px #000000' }}
+                >
                   <div className="flex items-center gap-4">
                     <span className="text-2xl">{typeInfo.icon}</span>
                     <div>
@@ -234,19 +246,31 @@ export default function WealthPage() {
       </div>
 
       {/* Liabilities Section */}
-      <div className="card-brutal">
-        <div className="card-brutal-header">
-          <h2 className="card-brutal-title">Liabilities</h2>
-          <Button onClick={handleAddLiability} className="bg-red text-white hover:bg-black">
+      <div 
+        className="bg-white border-[5px] border-black p-6 relative text-black"
+        style={{ boxShadow: '6px 6px 0px #000000' }}
+      >
+        <div className="flex justify-between items-center mb-4 pb-3 border-b-[3px] border-black">
+          <h2 
+            className="font-black text-lg uppercase tracking-wide m-0"
+            style={{ fontFamily: 'Arial Black, Arial, sans-serif' }}
+          >
+            Liabilities
+          </h2>
+          <Button onClick={handleAddLiability} className="bg-red-500 text-white hover:bg-black">
             + Add Liability
           </Button>
         </div>
-        <div className="card-brutal-content">
+        <div className="mt-4">
           <div className="grid gap-4">
             {liabilities.map((liability) => {
               const typeInfo = getLiabilityTypeInfo(liability.type);
               return (
-                <div key={liability.id} className="flex items-center justify-between p-4 border-3 border-black bg-white hover:bg-gray-100 transition-fast">
+                <div 
+                  key={liability.id} 
+                  className="flex items-center justify-between p-4 border-[3px] border-black bg-white hover:bg-gray-100 transition-all duration-200"
+                  style={{ boxShadow: '4px 4px 0px #000000' }}
+                >
                   <div className="flex items-center gap-4">
                     <span className="text-2xl">{typeInfo.icon}</span>
                     <div>
@@ -261,7 +285,7 @@ export default function WealthPage() {
                     </div>
                   </div>
                   <div className="text-right">
-                    <div className="font-black text-lg text-red">-€{liability.amount.toLocaleString()}</div>
+                    <div className="font-black text-lg text-red-500">-€{liability.amount.toLocaleString()}</div>
                   </div>
                 </div>
               );
