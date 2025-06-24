@@ -4,8 +4,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
-import { Calendar, DollarSign, Clock, TrendingUp, Edit, Plus, Zap } from "lucide-react";
+import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { useCopilotReadable, useCopilotAction } from "@copilotkit/react-core";
 
 interface WorkDay {
@@ -27,6 +26,11 @@ interface MonthlyData {
   workDaysCount: number;
 }
 
+const monthNames = [
+  "January", "February", "March", "April", "May", "June",
+  "July", "August", "September", "October", "November", "December"
+];
+
 export default function IncomePage() {
   const [selectedMonth, setSelectedMonth] = useState(new Date().getMonth());
   const [selectedYear, setSelectedYear] = useState(new Date().getFullYear());
@@ -45,11 +49,6 @@ export default function IncomePage() {
   const [editingDay, setEditingDay] = useState<WorkDay | null>(null);
   const [isDialogOpen, setIsDialogOpen] = useState(false);
 
-  const monthNames = [
-    "January", "February", "March", "April", "May", "June",
-    "July", "August", "September", "October", "November", "December"
-  ];
-
   const currentMonthData = useMemo((): MonthlyData => {
     const monthKey = `${selectedYear}-${String(selectedMonth + 1).padStart(2, '0')}`;
     const monthWorkDays = workDays.filter(day => day.date.startsWith(monthKey));
@@ -67,7 +66,7 @@ export default function IncomePage() {
       averageHourlyRate,
       workDaysCount: monthWorkDays.length
     };
-  }, [selectedMonth, selectedYear, workDays, monthNames]);
+  }, [selectedMonth, selectedYear, workDays]);
 
   const getDaysInMonth = (month: number, year: number) => {
     return new Date(year, month + 1, 0).getDate();
@@ -207,7 +206,7 @@ export default function IncomePage() {
               onClick={(e) => handleQuickAdd(day, e)}
               title="Quick add: 8h at €37/hour"
             >
-              <Zap className="h-3 w-3" />
+              <span>⚡</span>
             </Button>
           )}
         </div>
@@ -424,7 +423,7 @@ Potential earnings if all weekdays worked: €${weekdays.length * 8 * 37} (${(we
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
             <CardTitle className="text-sm font-medium">Total Earnings</CardTitle>
-            <DollarSign className="h-4 w-4 text-muted-foreground" />
+            <span className="text-gray-500">💰</span>
           </CardHeader>
           <CardContent>
             <div className="space-y-1">
@@ -445,7 +444,7 @@ Potential earnings if all weekdays worked: €${weekdays.length * 8 * 37} (${(we
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
             <CardTitle className="text-sm font-medium">Total Hours</CardTitle>
-            <Clock className="h-4 w-4 text-muted-foreground" />
+            <span className="text-gray-500">⏰</span>
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold">{currentMonthData.totalHours}</div>
@@ -458,7 +457,7 @@ Potential earnings if all weekdays worked: €${weekdays.length * 8 * 37} (${(we
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
             <CardTitle className="text-sm font-medium">Average Rate</CardTitle>
-            <TrendingUp className="h-4 w-4 text-muted-foreground" />
+            <span className="text-gray-500">📈</span>
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold">€{currentMonthData.averageHourlyRate.toFixed(2)}</div>
@@ -471,7 +470,7 @@ Potential earnings if all weekdays worked: €${weekdays.length * 8 * 37} (${(we
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
             <CardTitle className="text-sm font-medium">Work Days</CardTitle>
-            <Calendar className="h-4 w-4 text-muted-foreground" />
+            <span className="text-gray-500">📅</span>
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold">{currentMonthData.workDaysCount}</div>

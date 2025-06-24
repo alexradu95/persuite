@@ -1,7 +1,6 @@
 import type { Metadata } from "next";
 import "./globals.css";
 import "@copilotkit/react-ui/styles.css";
-import { AuthContextProvider } from "@/components/auth-context";
 import { CopilotKitWrapper } from "./wrapper";
 
 export const metadata: Metadata = {
@@ -15,11 +14,9 @@ export default function RootLayout({
   children: React.ReactNode;
 }) {
   return (
-    <html lang="en" className="light" suppressHydrationWarning>
+    <html lang="en" suppressHydrationWarning>
       <body className="antialiased">
-        <AuthContextProvider>
           <CopilotKitWrapper>{children}</CopilotKitWrapper>
-        </AuthContextProvider>
       </body>
     </html>
   );

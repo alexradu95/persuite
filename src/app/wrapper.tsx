@@ -5,18 +5,12 @@ import { CopilotKit } from "@copilotkit/react-core";
 import "@copilotkit/react-ui/styles.css";
 import { CopilotPopup } from "@copilotkit/react-ui";
 import CopilotContext from "@/components/copilot-context";
-import { useAuthContext } from "@/components/auth-context";
 
 export function CopilotKitWrapper({ children }: { children: React.ReactNode }) {
-  const { currentUser } = useAuthContext();
-
   return (
     <CopilotKit
       runtimeUrl="/api/copilotkit"
       showDevConsole={false}
-      properties={{
-        userId: currentUser?.id,
-      }}
     >
       <LayoutComponent>
         <CopilotContext>{children}</CopilotContext>

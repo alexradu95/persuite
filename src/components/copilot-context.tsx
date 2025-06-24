@@ -1,6 +1,5 @@
 "use client";
 import { useCopilotAction, useCopilotReadable } from "@copilotkit/react-core";
-import { useAuthContext } from "@/components/auth-context";
 import { Button } from "./ui/button";
 import { usePathname } from "next/navigation";
 
@@ -17,16 +16,8 @@ export enum IncomePageOperations {
 
 // A component dedicated to adding readables/actions that are global to the app.
 const CopilotContext = ({ children }: { children: React.ReactNode }) => {
-  const { currentUser } = useAuthContext();
-  const pathname = usePathname();
 
-  // A readable of app wide authentication and authorization context.
-  // The LLM will now know which user is it working against, when performing operations.
-  // Given the respective authorization role, the LLM will allow/deny actions/information throughout the entire app.
-  useCopilotReadable({
-    description: "The current user logged into the system",
-    value: currentUser,
-  });
+  const pathname = usePathname();
 
   useCopilotReadable({
     description:

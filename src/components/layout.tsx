@@ -1,8 +1,5 @@
 "use client";
 
-import { Calendar } from "lucide-react";
-import { useAuthContext } from "@/components/auth-context";
-import { ThemeToggle } from "@/components/ui/theme-toggle";
 import { useCopilotReadable } from "@copilotkit/react-core";
 import { usePathname } from "next/navigation";
 import { useCopilotChatSuggestions } from "@copilotkit/react-ui";
@@ -12,7 +9,6 @@ interface LayoutProps {
 }
 
 export function LayoutComponent({ children }: LayoutProps) {
-  const { currentUser } = useAuthContext();
   const pathname = usePathname();
   
   useCopilotReadable({
@@ -39,10 +35,9 @@ export function LayoutComponent({ children }: LayoutProps) {
       <div className="flex flex-1 flex-col overflow-hidden">
         <header className="flex h-16 items-center justify-between border-b px-4 md:px-6">
           <div className="flex items-center gap-2">
-            <Calendar className="h-6 w-6 text-blue-600" />
-            <h1 className="text-2xl font-bold">Working Days Tracker - Hello, {currentUser.name}</h1>
+            <span className="text-2xl">📅</span>
+            <h1 className="text-2xl font-bold">Working Days Tracker - Hello</h1>
           </div>
-          <ThemeToggle />
         </header>
         <main className="flex-1 overflow-y-auto">{children}</main>
       </div>
