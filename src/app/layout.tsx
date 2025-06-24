@@ -17,8 +17,8 @@ const geistMono = localFont({
 });
 
 export const metadata: Metadata = {
-  title: "CoBankKit",
-  description: "Collaborative finance for 21st century teams",
+  title: "Working Days Tracker",
+  description: "Track your working days and income with AI assistance",
 };
 
 export default function RootLayout({

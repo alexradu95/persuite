@@ -1,19 +1,9 @@
 "use client";
 
-import Link from "next/link";
-import { PiggyBank, TrendingUp, Calendar } from "lucide-react";
-
-import { cn } from "@/lib/utils";
-import { Button } from "@/components/ui/button";
-import {
-  Tooltip,
-  TooltipContent,
-  TooltipProvider,
-  TooltipTrigger,
-} from "@/components/ui/tooltip";
+import { Calendar } from "lucide-react";
 import { useAuthContext } from "@/components/auth-context";
 import { ThemeToggle } from "@/components/ui/theme-toggle";
-import { useCopilotChat, useCopilotReadable } from "@copilotkit/react-core";
+import { useCopilotReadable } from "@copilotkit/react-core";
 import { usePathname } from "next/navigation";
 import { useCopilotChatSuggestions } from "@copilotkit/react-ui";
 
@@ -21,79 +11,41 @@ interface LayoutProps {
   children: React.ReactNode;
 }
 
-
 export function LayoutComponent({ children }: LayoutProps) {
   const { currentUser } = useAuthContext();
   const pathname = usePathname();
-  console.log("pathname", pathname.split("/")[1]);
+  
   useCopilotReadable({
     description: "The current page where the user is",
-    value: pathname.split("/")[1] == "" ? "wealth" : pathname.split("/")[1],
+    value: pathname.split("/")[1] == "" ? "income" : pathname.split("/")[1],
   });
+  
   useCopilotChatSuggestions({
     instructions: `
-      You have access to where the user is in the app from copilotkit readables.
-      The user is using a wealth and income management application. Suggest prompts based on the current page:
-      - If on wealth page: "Update my stock investments to $30,000", "Show me my crypto portfolio breakdown", "What's my total net worth?", "Add a new ETF investment"
-      - If on income page: "Add a work day for today with 8 hours at $25/hour", "Show me this month's total earnings", "What's my average hourly rate?", "Calculate my projected monthly income"
-      - General prompts: "Analyze my financial overview", "Compare my income vs investments", "Show me my financial trends"
+      The user is using a working days tracking application. Suggest prompts for income/working days management:
+      - "Add a work day for today with 8 hours at €37/hour"
+      - "Show me this month's total earnings"
+      - "What's my average hourly rate?"
+      - "Add work days for all weekdays this month"
+      - "Calculate my projected monthly income"
+      - "Show me free days available for work"
     `,
     minSuggestions: 3,
     maxSuggestions: 3,
   });
 
-  const { setMessages, reloadMessages } = useCopilotChat();
-
   return (
     <div className="flex h-screen overflow-hidden">
-      <aside className="flex w-16 flex-col items-center space-y-8 border-r bg-gray-900 py-4">
-        <Link href="/wealth" className="flex items-center justify-center">
-          <TrendingUp className="h-8 w-8 text-white" />
-        </Link>
-        <nav className="flex flex-1 flex-col items-center space-y-6">
-          <NavItem href="/wealth" icon={PiggyBank} label="Wealth Management" />
-          <NavItem href="/income" icon={Calendar} label="Income Tracking" />
-        </nav>
-        <div className="flex flex-col items-center space-y-4">
-          <ThemeToggle />
-        </div>
-      </aside>
       <div className="flex flex-1 flex-col overflow-hidden">
         <header className="flex h-16 items-center justify-between border-b px-4 md:px-6">
-          <h1 className="text-2xl font-bold">Financial Manager - Hello, {currentUser.name}</h1>
+          <div className="flex items-center gap-2">
+            <Calendar className="h-6 w-6 text-blue-600" />
+            <h1 className="text-2xl font-bold">Working Days Tracker - Hello, {currentUser.name}</h1>
+          </div>
+          <ThemeToggle />
         </header>
         <main className="flex-1 overflow-y-auto">{children}</main>
       </div>
     </div>
-  );
-}
-
-interface NavItemProps {
-  href: string;
-  icon: React.ComponentType<{ className?: string }>;
-  label: string;
-}
-
-function NavItem({ href, icon: Icon, label }: NavItemProps) {
-  return (
-    <TooltipProvider>
-      <Tooltip>
-        <TooltipTrigger asChild>
-          <Link
-            href={href}
-            className={cn(
-              "flex h-10 w-10 items-center justify-center rounded-md text-gray-400 hover:bg-gray-800 hover:text-white",
-              "transition-colors duration-200"
-            )}
-          >
-            <Icon className="h-5 w-5" />
-            <span className="sr-only">{label}</span>
-          </Link>
-        </TooltipTrigger>
-        <TooltipContent side="right">
-          <p>{label}</p>
-        </TooltipContent>
-      </Tooltip>
-    </TooltipProvider>
   );
 }

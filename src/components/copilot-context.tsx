@@ -5,20 +5,7 @@ import { Button } from "./ui/button";
 import { usePathname } from "next/navigation";
 
 export enum Page {
-  Wealth = "wealth",
   Income = "income",
-}
-
-export enum WealthPageOperations {
-  AddInvestment = "add-investment",
-  EditInvestment = "edit-investment",
-  DeleteInvestment = "delete-investment",
-  AddCrypto = "add-crypto",
-  EditCrypto = "edit-crypto",
-  DeleteCrypto = "delete-crypto",
-  AddDeposit = "add-deposit",
-  EditDeposit = "edit-deposit",
-  DeleteDeposit = "delete-deposit",
 }
 
 export enum IncomePageOperations {
@@ -47,7 +34,6 @@ const CopilotContext = ({ children }: { children: React.ReactNode }) => {
     value: {
       pages: Object.values(Page),
       operations: {
-        [Page.Wealth]: Object.values(WealthPageOperations),
         [Page.Income]: Object.values(IncomePageOperations),
       },
       currentPage: pathname.split("/").pop() as Page,
@@ -62,11 +48,8 @@ const CopilotContext = ({ children }: { children: React.ReactNode }) => {
   useCopilotAction({
     name: "navigateToPageAndPerform",
     description: `
-            Navigate to the appropriate page to perform operations:
-            - Wealth page: Adding, editing, or deleting investments, managing cryptocurrency holdings and staking, updating bank deposits and interest rates
+            Navigate to the income page to perform working days operations:
             - Income page: Adding work days, editing hourly rates, viewing monthly income reports, calculating earnings
-            
-            If the user requests operations not available on the current page, navigate them to the correct page.
         `,
     parameters: [
       {
@@ -74,7 +57,7 @@ const CopilotContext = ({ children }: { children: React.ReactNode }) => {
         type: "string",
         description: "The page in which to perform the operation",
         required: true,
-        enum: ["/wealth", "/income", "/"],
+        enum: ["/income", "/"],
       },
       {
         name: "operation",

@@ -27,8 +27,8 @@ export function CopilotKitWrapper({ children }: { children: React.ReactNode }) {
           "You are assisting the user as best as you can. Answer in the best way possible given the data you have."
         }
         labels={{
-          title: "Financial Assistant",
-          initial: "Hi, I'm your Financial Management Copilot. I can help you track investments, crypto, bank deposits, manage your income, and analyze your financial data. How can I assist you today?",
+          title: "Working Days Assistant",
+          initial: "Hi, I'm your Working Days Copilot. I can help you track your work days, calculate earnings, manage your schedule, and analyze your income data. How can I assist you today?",
         }}
       />
     </CopilotKit>
