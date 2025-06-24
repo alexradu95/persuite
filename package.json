@@ -6,7 +6,12 @@
     "dev": "next dev",
     "build": "next build",
     "start": "next start",
-    "lint": "next lint"
+    "lint": "next lint",
+    "test": "vitest run",
+    "test:watch": "vitest",
+    "test:ui": "vitest --ui",
+    "migrate": "tsx scripts/migrate.ts",
+    "migrate:status": "tsx scripts/migration-status.ts"
   },
   "dependencies": {
     "@copilotkit/react-core": "^1.8.12",
@@ -24,12 +29,19 @@
     "zod": "^3.25.67"
   },
   "devDependencies": {
+    "@rollup/rollup-linux-x64-gnu": "^4.44.0",
+    "@testing-library/dom": "^10.4.0",
+    "@testing-library/react": "^16.3.0",
     "@types/node": "^20",
     "@types/react": "^18",
     "@types/react-dom": "^18",
+    "@vitejs/plugin-react": "^4.6.0",
     "eslint": "^8",
     "eslint-config-next": "14.2.14",
-    "typescript": "^5"
+    "jsdom": "^26.1.0",
+    "typescript": "^5",
+    "vite-tsconfig-paths": "^5.1.4",
+    "vitest": "^3.2.4"
   },
   "packageManager": "pnpm@10.10.0+sha512.d615db246fe70f25dcfea6d8d73dee782ce23e2245e3c4f6f888249fb568149318637dca73c2c5c8ef2a4ca0d5657fb9567188bfab47f566d1ee6ce987815c39"
 }

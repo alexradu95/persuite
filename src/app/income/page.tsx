@@ -1,27 +1,11 @@
 'use client'
-import { useState, useMemo } from "react";
+import { useState, useEffect, useMemo } from "react";
+import { useRouter, useSearchParams } from "next/navigation";
 import { Button, Input, Label } from "@/components/atoms";
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, InfoCard } from "@/components/molecules";
 import { useCopilotReadable, useCopilotAction } from "@copilotkit/react-core";
-
-interface WorkDay {
-  id: string;
-  date: string;
-  hours: number;
-  hourlyRate: number;
-  dailyEarnings: number;
-  notes?: string;
-}
-
-interface MonthlyData {
-  month: string;
-  year: number;
-  workDays: WorkDay[];
-  totalHours: number;
-  totalEarnings: number;
-  averageHourlyRate: number;
-  workDaysCount: number;
-}
+import { useIncomeService } from "@/lib/hooks/use-income-service";
+import { WorkDay, MonthlyData, CreateWorkDay, UpdateWorkDay } from "@/lib/db/types";
 
 const monthNames = [
   "January", "February", "March", "April", "May", "June",
@@ -29,41 +13,83 @@ const monthNames = [
 ];
 
 export default function IncomePage() {
-  const [selectedMonth, setSelectedMonth] = useState(new Date().getMonth());
-  const [selectedYear, setSelectedYear] = useState(new Date().getFullYear());
+  const router = useRouter();
+  const searchParams = useSearchParams();
+  
+  // Initialize from URL params or current date
+  const [selectedMonth, setSelectedMonth] = useState(() => {
+    const monthParam = searchParams.get('month');
+    const currentMonth = new Date().getMonth();
+    return monthParam && !isNaN(parseInt(monthParam)) ? parseInt(monthParam) - 1 : currentMonth; // URL uses 1-12, state uses 0-11
+  });
+  
+  const [selectedYear, setSelectedYear] = useState(() => {
+    const yearParam = searchParams.get('year');
+    const currentYear = new Date().getFullYear();
+    return yearParam && !isNaN(parseInt(yearParam)) ? parseInt(yearParam) : currentYear;
+  });
   
   // Exchange rates (you might want to fetch these from an API in a real app)
-  const exchangeRates = {
+  const exchangeRates = useMemo(() => ({
     EUR_TO_RON: 4.97,  // 1 EUR = 4.97 RON (approximate)
     EUR_TO_USD: 1.07   // 1 EUR = 1.07 USD (approximate)
-  };
-  const [workDays, setWorkDays] = useState<WorkDay[]>([
-    { id: '1', date: '2024-12-15', hours: 8, hourlyRate: 37, dailyEarnings: 296, notes: 'Regular workday' },
-    { id: '2', date: '2024-12-16', hours: 6, hourlyRate: 40, dailyEarnings: 240, notes: 'Half day consulting' },
-    { id: '3', date: '2024-12-17', hours: 8, hourlyRate: 37, dailyEarnings: 296, notes: 'Standard workday' },
-  ]);
+  }), []);
   
+  const [monthlyData, setMonthlyData] = useState<MonthlyData | null>(null);
   const [editingDay, setEditingDay] = useState<WorkDay | null>(null);
   const [isDialogOpen, setIsDialogOpen] = useState(false);
+  
+  const incomeService = useIncomeService();
 
-  const currentMonthData = useMemo((): MonthlyData => {
-    const monthKey = `${selectedYear}-${String(selectedMonth + 1).padStart(2, '0')}`;
-    const monthWorkDays = workDays.filter(day => day.date.startsWith(monthKey));
+  // Function to update URL when month/year changes
+  const updateURL = useMemo(() => (month: number, year: number) => {
+    const params = new URLSearchParams();
+    params.set('month', (month + 1).toString()); // Convert 0-11 to 1-12 for URL
+    params.set('year', year.toString());
+    router.push(`/income?${params.toString()}`, { scroll: false });
+  }, [router]);
+
+  // Handle browser navigation (back/forward buttons)
+  useEffect(() => {
+    const monthParam = searchParams.get('month');
+    const yearParam = searchParams.get('year');
     
-    const totalHours = monthWorkDays.reduce((sum, day) => sum + day.hours, 0);
-    const totalEarnings = monthWorkDays.reduce((sum, day) => sum + day.dailyEarnings, 0);
-    const averageHourlyRate = totalHours > 0 ? totalEarnings / totalHours : 0;
+    if (monthParam && yearParam && !isNaN(parseInt(monthParam)) && !isNaN(parseInt(yearParam))) {
+      const urlMonth = parseInt(monthParam) - 1; // Convert 1-12 to 0-11
+      const urlYear = parseInt(yearParam);
+      
+      // Only update if different from current state
+      if (urlMonth !== selectedMonth || urlYear !== selectedYear) {
+        setSelectedMonth(urlMonth);
+        setSelectedYear(urlYear);
+      }
+    }
+  }, [searchParams]); // React to URL changes only
 
-    return {
-      month: monthNames[selectedMonth],
-      year: selectedYear,
-      workDays: monthWorkDays,
-      totalHours,
-      totalEarnings,
-      averageHourlyRate,
-      workDaysCount: monthWorkDays.length
+  // Load monthly data when month/year changes
+  useEffect(() => {
+    const loadMonthlyData = async () => {
+      try {
+        const data = await incomeService.getMonthlyData(selectedMonth + 1, selectedYear);
+        setMonthlyData(data);
+      } catch (error) {
+        console.error('Failed to load monthly data:', error);
+      }
     };
-  }, [selectedMonth, selectedYear, workDays]);
+
+    loadMonthlyData();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [selectedMonth, selectedYear]);
+
+  const currentMonthData = monthlyData || {
+    month: monthNames[selectedMonth],
+    year: selectedYear,
+    workDays: [],
+    totalHours: 0,
+    totalEarnings: 0,
+    averageHourlyRate: 0,
+    workDaysCount: 0
+  };
 
   const getDaysInMonth = (month: number, year: number) => {
     return new Date(year, month + 1, 0).getDate();
@@ -76,11 +102,11 @@ export default function IncomePage() {
   };
 
   const isWorkDay = (date: string) => {
-    return workDays.some(day => day.date === date);
+    return currentMonthData.workDays.some(day => day.date === date);
   };
 
   const getWorkDayData = (date: string) => {
-    return workDays.find(day => day.date === date);
+    return currentMonthData.workDays.find(day => day.date === date);
   };
 
   const handleDayClick = (day: number) => {
@@ -90,58 +116,98 @@ export default function IncomePage() {
     if (existingWorkDay) {
       setEditingDay(existingWorkDay);
     } else {
-      setEditingDay({
-        id: Date.now().toString(),
+      // Create a temporary work day for editing
+      const tempWorkDay: WorkDay = {
+        id: `temp-${Date.now()}`,
         date: dateString,
         hours: 8,
         hourlyRate: 37,
-        dailyEarnings: 296,
         notes: ''
-      });
+      };
+      setEditingDay(tempWorkDay);
     }
     setIsDialogOpen(true);
   };
 
-  const handleSaveWorkDay = (workDay: WorkDay) => {
-    workDay.dailyEarnings = workDay.hours * workDay.hourlyRate;
-    
-    const existingIndex = workDays.findIndex(day => day.id === workDay.id);
-    if (existingIndex >= 0) {
-      const updatedWorkDays = [...workDays];
-      updatedWorkDays[existingIndex] = workDay;
-      setWorkDays(updatedWorkDays);
-    } else {
-      setWorkDays([...workDays, workDay]);
+  const handleSaveWorkDay = async (workDay: WorkDay) => {
+    try {
+      const isExisting = !workDay.id.startsWith('temp-');
+      
+      if (isExisting) {
+        // Update existing work day
+        const updateData: UpdateWorkDay = {
+          id: workDay.id,
+          hours: workDay.hours,
+          hourlyRate: workDay.hourlyRate,
+          notes: workDay.notes,
+        };
+        await incomeService.updateWorkDay(updateData);
+      } else {
+        // Create new work day
+        const createData: CreateWorkDay = {
+          id: Date.now().toString(),
+          date: workDay.date,
+          hours: workDay.hours,
+          hourlyRate: workDay.hourlyRate,
+          notes: workDay.notes,
+        };
+        await incomeService.createWorkDay(createData);
+      }
+
+      // Reload monthly data
+      const data = await incomeService.getMonthlyData(selectedMonth + 1, selectedYear);
+      setMonthlyData(data);
+      
+      setIsDialogOpen(false);
+      setEditingDay(null);
+    } catch (error) {
+      console.error('Failed to save work day:', error);
+      // You might want to show a toast notification here
     }
-    setIsDialogOpen(false);
-    setEditingDay(null);
   };
 
-  const handleDeleteWorkDay = (workDayId: string) => {
-    setWorkDays(workDays.filter(day => day.id !== workDayId));
-    setIsDialogOpen(false);
-    setEditingDay(null);
+  const handleDeleteWorkDay = async (workDayId: string) => {
+    try {
+      await incomeService.deleteWorkDay(workDayId);
+      
+      // Reload monthly data
+      const data = await incomeService.getMonthlyData(selectedMonth + 1, selectedYear);
+      setMonthlyData(data);
+      
+      setIsDialogOpen(false);
+      setEditingDay(null);
+    } catch (error) {
+      console.error('Failed to delete work day:', error);
+      // You might want to show a toast notification here
+    }
   };
 
-  const handleQuickAdd = (day: number, event: React.MouseEvent) => {
+  const handleQuickAdd = async (day: number, event: React.MouseEvent) => {
     event.stopPropagation();
     const dateString = `${selectedYear}-${String(selectedMonth + 1).padStart(2, '0')}-${String(day).padStart(2, '0')}`;
     
     if (isWorkDay(dateString)) return; // Don't add if already a work day
     
-    const newWorkDay: WorkDay = {
-      id: Date.now().toString(),
-      date: dateString,
-      hours: 8,
-      hourlyRate: 37,
-      dailyEarnings: 296,
-      notes: 'Quick add - 8h at €37/hour'
-    };
-    
-    setWorkDays([...workDays, newWorkDay]);
+    try {
+      const createData: CreateWorkDay = {
+        id: Date.now().toString(),
+        date: dateString,
+        hours: 8,
+        hourlyRate: 37,
+        notes: 'Quick add - 8h at €37/hour'
+      };
+      
+      await incomeService.createWorkDay(createData);
+      
+      // Reload monthly data
+      const data = await incomeService.getMonthlyData(selectedMonth + 1, selectedYear);
+      setMonthlyData(data);
+    } catch (error) {
+      console.error('Failed to quick add work day:', error);
+    }
   };
 
-  const getFreeDaysInMonth = () => {
+  const getFreeDaysInMonth = useMemo(() => {
     const monthKey = `${selectedYear}-${String(selectedMonth + 1).padStart(2, '0')}`;
     const daysInMonth = getDaysInMonth(selectedMonth, selectedYear);
     const freeDays = [];
@@ -157,15 +223,15 @@ export default function IncomePage() {
       }
     }
     return freeDays;
-  };
+  }, [selectedYear, selectedMonth, currentMonthData.workDays]);
 
-  const convertCurrency = (amountInEur: number) => {
+  const convertCurrency = useMemo(() => (amountInEur: number) => {
     return {
       eur: amountInEur,
       ron: amountInEur * exchangeRates.EUR_TO_RON,
       usd: amountInEur * exchangeRates.EUR_TO_USD
     };
-  };
+  }, [exchangeRates.EUR_TO_RON, exchangeRates.EUR_TO_USD]);
 
   const renderCalendar = () => {
     const daysInMonth = getDaysInMonth(selectedMonth, selectedYear);
@@ -199,7 +265,7 @@ export default function IncomePage() {
         >
           <span className="font-black text-lg mb-1">{day}</span>
           {workDayData && (
-            <span className="text-xs font-bold opacity-80">€{workDayData.dailyEarnings}</span>
+            <span className="text-xs font-bold opacity-80">€{incomeService.calculateEarnings(workDayData.hours, workDayData.hourlyRate)}</span>
           )}
           {!isWork && (
             <Button
@@ -227,9 +293,9 @@ export default function IncomePage() {
         ...currentMonthData,
         totalEarningsMultiCurrency: convertCurrency(currentMonthData.totalEarnings)
       },
-      allWorkDays: workDays,
+      allWorkDays: currentMonthData.workDays,
       selectedPeriod: `${monthNames[selectedMonth]} ${selectedYear}`,
-      freeDaysThisMonth: getFreeDaysInMonth(),
+      freeDaysThisMonth: getFreeDaysInMonth,
       defaultRate: 37,
       defaultHours: 8,
       exchangeRates
@@ -246,17 +312,27 @@ export default function IncomePage() {
       { name: "notes", type: "string", description: "Optional notes for the work day", required: false },
     ],
     handler: async ({ date, hours, hourlyRate, notes = "" }) => {
-      const newWorkDay: WorkDay = {
-        id: Date.now().toString(),
-        date,
-        hours,
-        hourlyRate,
-        dailyEarnings: hours * hourlyRate,
-        notes
-      };
-      setWorkDays([...workDays, newWorkDay]);
-      const earnings = convertCurrency(newWorkDay.dailyEarnings);
-      return `Added work day for ${date}: ${hours} hours at €${hourlyRate}/hour = €${newWorkDay.dailyEarnings} (${earnings.ron.toFixed(2)} RON, $${earnings.usd.toFixed(2)} USD)`;
+      try {
+        const createData: CreateWorkDay = {
+          id: Date.now().toString(),
+          date,
+          hours,
+          hourlyRate,
+          notes
+        };
+        
+        await incomeService.createWorkDay(createData);
+        
+        // Reload monthly data
+        const data = await incomeService.getMonthlyData(selectedMonth + 1, selectedYear);
+        setMonthlyData(data);
+        
+        const dailyEarnings = incomeService.calculateEarnings(hours, hourlyRate);
+        const earnings = convertCurrency(dailyEarnings);
+        return `Added work day for ${date}: ${hours} hours at €${hourlyRate}/hour = €${dailyEarnings} (${earnings.ron.toFixed(2)} RON, $${earnings.usd.toFixed(2)} USD)`;
+      } catch (error) {
+        return `Failed to add work day: ${error instanceof Error ? error.message : 'Unknown error'}`;
+      }
     },
   });
 
@@ -270,95 +346,101 @@ export default function IncomePage() {
       { name: "notes", type: "string", description: "Notes for the work days", required: false },
     ],
     handler: async ({ days, hours = 8, hourlyRate = 37, notes = "Bulk added via AI" }) => {
-      const monthKey = `${selectedYear}-${String(selectedMonth + 1).padStart(2, '0')}`;
-      const daysInMonth = getDaysInMonth(selectedMonth, selectedYear);
-      const addedDays = [];
-      
-      // Parse different day formats
-      if (days.toLowerCase() === 'all-weekdays') {
-        // Add all weekdays (Mon-Fri) that are free
-        for (let day = 1; day <= daysInMonth; day++) {
-          const date = new Date(selectedYear, selectedMonth, day);
-          const dayOfWeek = date.getDay(); // 0=Sun, 1=Mon, ..., 6=Sat
-          const dateString = `${monthKey}-${String(day).padStart(2, '0')}`;
-          
-          if (dayOfWeek >= 1 && dayOfWeek <= 5 && !isWorkDay(dateString)) {
-            const newWorkDay: WorkDay = {
-              id: `${Date.now()}-${day}`,
-              date: dateString,
-              hours,
-              hourlyRate,
-              dailyEarnings: hours * hourlyRate,
-              notes
-            };
-            addedDays.push(newWorkDay);
-          }
-        }
-      } else if (days.includes('-')) {
-        // Handle ranges like "1-5" or "10-15"
-        const [start, end] = days.split('-').map(d => parseInt(d.trim()));
-        for (let day = start; day <= Math.min(end, daysInMonth); day++) {
-          const dateString = `${monthKey}-${String(day).padStart(2, '0')}`;
-          if (!isWorkDay(dateString)) {
-            const newWorkDay: WorkDay = {
-              id: `${Date.now()}-${day}`,
-              date: dateString,
-              hours,
-              hourlyRate,
-              dailyEarnings: hours * hourlyRate,
-              notes
-            };
-            addedDays.push(newWorkDay);
-          }
-        }
-      } else {
-        // Handle comma-separated days or weekday names
-        const dayList = days.split(',').map(d => d.trim().toLowerCase());
-        const weekdayMap: { [key: string]: number } = {
-          'mon': 1, 'monday': 1,    // Monday = 1
-          'tue': 2, 'tuesday': 2,   // Tuesday = 2
-          'wed': 3, 'wednesday': 3, // Wednesday = 3
-          'thu': 4, 'thursday': 4,  // Thursday = 4
-          'fri': 5, 'friday': 5,    // Friday = 5
-          'sat': 6, 'saturday': 6,  // Saturday = 6
-          'sun': 0, 'sunday': 0     // Sunday = 0
-        };
+      try {
+        const monthKey = `${selectedYear}-${String(selectedMonth + 1).padStart(2, '0')}`;
+        const daysInMonth = getDaysInMonth(selectedMonth, selectedYear);
+        const workDaysToAdd: CreateWorkDay[] = [];
         
-        for (let day = 1; day <= daysInMonth; day++) {
-          const date = new Date(selectedYear, selectedMonth, day);
-          const dayOfWeek = date.getDay();
-          const dateString = `${monthKey}-${String(day).padStart(2, '0')}`;
-          
-          const shouldAdd = dayList.some(d => {
-            if (!isNaN(parseInt(d))) {
-              return parseInt(d) === day;
-            } else if (weekdayMap[d] !== undefined) {
-              return weekdayMap[d] === dayOfWeek;
+        // Parse different day formats
+        if (days.toLowerCase() === 'all-weekdays') {
+          // Add all weekdays (Mon-Fri) that are free
+          for (let day = 1; day <= daysInMonth; day++) {
+            const date = new Date(selectedYear, selectedMonth, day);
+            const dayOfWeek = date.getDay(); // 0=Sun, 1=Mon, ..., 6=Sat
+            const dateString = `${monthKey}-${String(day).padStart(2, '0')}`;
+            
+            if (dayOfWeek >= 1 && dayOfWeek <= 5 && !isWorkDay(dateString)) {
+              workDaysToAdd.push({
+                id: `${Date.now()}-${day}`,
+                date: dateString,
+                hours,
+                hourlyRate,
+                notes
+              });
             }
-            return false;
-          });
+          }
+        } else if (days.includes('-')) {
+          // Handle ranges like "1-5" or "10-15"
+          const [start, end] = days.split('-').map(d => parseInt(d.trim()));
+          for (let day = start; day <= Math.min(end, daysInMonth); day++) {
+            const dateString = `${monthKey}-${String(day).padStart(2, '0')}`;
+            if (!isWorkDay(dateString)) {
+              workDaysToAdd.push({
+                id: `${Date.now()}-${day}`,
+                date: dateString,
+                hours,
+                hourlyRate,
+                notes
+              });
+            }
+          }
+        } else {
+          // Handle comma-separated days or weekday names
+          const dayList = days.split(',').map(d => d.trim().toLowerCase());
+          const weekdayMap: { [key: string]: number } = {
+            'mon': 1, 'monday': 1,    // Monday = 1
+            'tue': 2, 'tuesday': 2,   // Tuesday = 2
+            'wed': 3, 'wednesday': 3, // Wednesday = 3
+            'thu': 4, 'thursday': 4,  // Thursday = 4
+            'fri': 5, 'friday': 5,    // Friday = 5
+            'sat': 6, 'saturday': 6,  // Saturday = 6
+            'sun': 0, 'sunday': 0     // Sunday = 0
+          };
           
-          if (shouldAdd && !isWorkDay(dateString)) {
-            const newWorkDay: WorkDay = {
-              id: `${Date.now()}-${day}`,
-              date: dateString,
-              hours,
-              hourlyRate,
-              dailyEarnings: hours * hourlyRate,
-              notes
-            };
-            addedDays.push(newWorkDay);
+          for (let day = 1; day <= daysInMonth; day++) {
+            const date = new Date(selectedYear, selectedMonth, day);
+            const dayOfWeek = date.getDay();
+            const dateString = `${monthKey}-${String(day).padStart(2, '0')}`;
+            
+            const shouldAdd = dayList.some(d => {
+              if (!isNaN(parseInt(d))) {
+                return parseInt(d) === day;
+              } else if (weekdayMap[d] !== undefined) {
+                return weekdayMap[d] === dayOfWeek;
+              }
+              return false;
+            });
+            
+            if (shouldAdd && !isWorkDay(dateString)) {
+              workDaysToAdd.push({
+                id: `${Date.now()}-${day}`,
+                date: dateString,
+                hours,
+                hourlyRate,
+                notes
+              });
+            }
           }
         }
-      }
-      
-      if (addedDays.length > 0) {
-        setWorkDays([...workDays, ...addedDays]);
-        const totalEarnings = addedDays.reduce((sum, day) => sum + day.dailyEarnings, 0);
-        const earnings = convertCurrency(totalEarnings);
-        return `Added ${addedDays.length} work days with total earnings of €${totalEarnings} (${earnings.ron.toFixed(2)} RON, $${earnings.usd.toFixed(2)} USD). Days: ${addedDays.map(d => d.date.split('-')[2]).join(', ')}`;
-      } else {
-        return "No work days were added. The specified days might already be work days or invalid.";
+        
+        if (workDaysToAdd.length > 0) {
+          // Add all work days to database
+          for (const workDay of workDaysToAdd) {
+            await incomeService.createWorkDay(workDay);
+          }
+          
+          // Reload monthly data
+          const data = await incomeService.getMonthlyData(selectedMonth + 1, selectedYear);
+          setMonthlyData(data);
+          
+          const totalEarnings = workDaysToAdd.reduce((sum, day) => sum + incomeService.calculateEarnings(day.hours, day.hourlyRate), 0);
+          const earnings = convertCurrency(totalEarnings);
+          return `Added ${workDaysToAdd.length} work days with total earnings of €${totalEarnings} (${earnings.ron.toFixed(2)} RON, $${earnings.usd.toFixed(2)} USD). Days: ${workDaysToAdd.map(d => d.date.split('-')[2]).join(', ')}`;
+        } else {
+          return "No work days were added. The specified days might already be work days or invalid.";
+        }
+      } catch (error) {
+        return `Failed to add work days: ${error instanceof Error ? error.message : 'Unknown error'}`;
       }
     },
   });
@@ -368,7 +450,7 @@ export default function IncomePage() {
     description: "Show all available free days in the current month that can be used for work",
     parameters: [],
     handler: async () => {
-      const freeDays = getFreeDaysInMonth();
+      const freeDays = getFreeDaysInMonth;
       if (freeDays.length === 0) {
         return `No free days available in ${monthNames[selectedMonth]} ${selectedYear} - all days are already work days!`;
       }
@@ -404,8 +486,11 @@ Potential earnings if all weekdays worked: €${weekdays.length * 8 * 37} (${(we
           value={`${selectedYear}-${selectedMonth}`}
           onChange={(e) => {
             const [year, month] = e.target.value.split('-');
-            setSelectedYear(parseInt(year));
-            setSelectedMonth(parseInt(month));
+            const newYear = parseInt(year);
+            const newMonth = parseInt(month);
+            setSelectedYear(newYear);
+            setSelectedMonth(newMonth);
+            updateURL(newMonth, newYear);
           }}
         >
           {Array.from({ length: 24 }, (_, i) => {
@@ -420,13 +505,26 @@ Potential earnings if all weekdays worked: €${weekdays.length * 8 * 37} (${(we
         </select>
       </div>
 
+      {/* Loading and Error States */}
+      {incomeService.error && (
+        <div className="bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded mb-4">
+          <strong>Error:</strong> {incomeService.error}
+          <button 
+            onClick={incomeService.clearError}
+            className="ml-2 text-red-500 hover:text-red-700"
+          >
+            ✕
+          </button>
+        </div>
+      )}
+
       {/* Monthly Summary Cards */}
       <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-4 md:gap-6">
         <InfoCard
           title="Total Earnings"
           icon="💰"
-          value={`€${currentMonthData.totalEarnings.toFixed(2)}`}
-          subValues={[
+          value={incomeService.isLoading ? "Loading..." : `€${currentMonthData.totalEarnings.toFixed(2)}`}
+          subValues={incomeService.isLoading ? [] : [
             { value: convertCurrency(currentMonthData.totalEarnings).ron.toFixed(2), label: "RON" },
             { value: `$${convertCurrency(currentMonthData.totalEarnings).usd.toFixed(2)}`, label: "USD" }
           ]}

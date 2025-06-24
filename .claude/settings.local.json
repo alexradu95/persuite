@@ -9,7 +9,8 @@
       "Bash(npm remove:*)",
       "Bash(grep:*)",
       "Bash(npm run lint)",
-      "Bash(find:*)"
+      "Bash(find:*)",
+      "Bash(ls:*)"
     ],
     "deny": []
   }
