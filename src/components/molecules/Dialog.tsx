@@ -1,6 +1,7 @@
 "use client"
 
 import * as React from "react"
+import { Typography, Button } from "../atoms"
 
 interface DialogContextType {
   open: boolean
@@ -85,24 +86,26 @@ const DialogContent = React.forwardRef<HTMLDivElement, React.HTMLAttributes<HTML
     
     if (!open) return null
     
-    const classes = `fixed inset-0 z-50 bg-black bg-opacity-80 flex items-center justify-center p-4`
-    const contentClasses = `w-full max-w-lg bg-white border border-gray-200 rounded-lg shadow-lg p-6 relative ${className}`
+    const overlayClasses = "fixed inset-0 z-50 bg-black bg-opacity-80 flex items-center justify-center p-4"
+    const contentClasses = `w-full max-w-lg bg-white border-thick border-black shadow-brutal-lg p-6 relative ${className}`
     
     return (
-      <div className={classes}>
+      <div className={overlayClasses}>
         <div
           ref={ref}
           className={contentClasses}
           {...props}
         >
           {children}
-          <button
+          <Button
+            variant="ghost"
+            size="icon"
             onClick={() => onOpenChange(false)}
-            className="absolute right-4 top-4 rounded-sm opacity-70 hover:opacity-100 focus:outline-none focus:ring-2 focus:ring-gray-900"
+            className="absolute right-4 top-4 border-none shadow-none hover:bg-red hover:text-white"
           >
-            <span>✕</span>
+            <span className="text-lg font-black">✕</span>
             <span className="sr-only">Close</span>
-          </button>
+          </Button>
         </div>
       </div>
     )
@@ -111,60 +114,72 @@ const DialogContent = React.forwardRef<HTMLDivElement, React.HTMLAttributes<HTML
 DialogContent.displayName = "DialogContent"
 
 const DialogHeader = React.forwardRef<HTMLDivElement, React.HTMLAttributes<HTMLDivElement>>(
-  ({ className = "", ...props }, ref) => {
-    const classes = `flex flex-col space-y-1.5 text-center sm:text-left ${className}`
+  ({ className = "", children, ...props }, ref) => {
+    const classes = `flex flex-col space-y-2 text-center sm:text-left mb-6 pb-4 border-b border-black ${className}`
     
     return (
       <div
         ref={ref}
         className={classes}
         {...props}
-      />
+      >
+        {children}
+      </div>
     )
   }
 )
 DialogHeader.displayName = "DialogHeader"
 
 const DialogTitle = React.forwardRef<HTMLHeadingElement, React.HTMLAttributes<HTMLHeadingElement>>(
-  ({ className = "", ...props }, ref) => {
-    const classes = `text-lg font-semibold leading-none tracking-tight ${className}`
-    
+  ({ className = "", children, ...props }, ref) => {
+    const { color, ...typographyProps } = props as any
     return (
-      <h3
-        ref={ref}
-        className={classes}
-        {...props}
-      />
+      <Typography
+        as="h2"
+        variant="h3"
+        className={className}
+        ref={ref as React.Ref<HTMLHeadingElement>}
+        {...typographyProps}
+      >
+        {children}
+      </Typography>
     )
   }
 )
 DialogTitle.displayName = "DialogTitle"
 
 const DialogDescription = React.forwardRef<HTMLParagraphElement, React.HTMLAttributes<HTMLParagraphElement>>(
-  ({ className = "", ...props }, ref) => {
-    const classes = `text-sm text-gray-500 ${className}`
-    
+  ({ className = "", children, ...props }, ref) => {
+    const { color, ...typographyProps } = props as any
     return (
-      <p
-        ref={ref}
-        className={classes}
-        {...props}
-      />
+      <Typography
+        as="p"
+        variant="body"
+        color="gray-600"
+        weight="bold"
+        className={className}
+        ref={ref as React.Ref<HTMLParagraphElement>}
+        {...typographyProps}
+      >
+        {children}
+      </Typography>
     )
   }
 )
 DialogDescription.displayName = "DialogDescription"
 
 const DialogFooter = React.forwardRef<HTMLDivElement, React.HTMLAttributes<HTMLDivElement>>(
-  ({ className = "", ...props }, ref) => {
-    const classes = `flex flex-col-reverse sm:flex-row sm:justify-end sm:space-x-2 ${className}`
+  ({ className = "", children, ...props }, ref) => {
+    const classes = `flex flex-col-reverse sm:flex-row sm:justify-end gap-3 mt-6 pt-4 border-t border-black ${className}`
     
     return (
       <div
         ref={ref}
         className={classes}
         {...props}
-      />
+      >
+        {children}
+      </div>
     )
   }
 )

@@ -1,7 +1,7 @@
 "use client";
 import { useCopilotAction, useCopilotReadable } from "@copilotkit/react-core";
-import { Button } from "./ui/button";
 import { usePathname } from "next/navigation";
+import { Button } from "./atoms";
 
 export enum Page {
   Income = "income",
@@ -72,7 +72,6 @@ const CopilotContext = ({ children }: { children: React.ReactNode }) => {
         <div className="flex items-center justify-center space-x-4 rounded-lg bg-white p-4">
           <div>Navigate to {page}?</div>
           <Button
-            variant="outline"
             size="icon"
             onClick={() => {
               const operationParams = `?operation=${operation}`;
@@ -89,7 +88,6 @@ const CopilotContext = ({ children }: { children: React.ReactNode }) => {
             Yes
           </Button>
           <Button
-            variant="outline"
             size="icon"
             onClick={() => handler?.("cancelled")}
             aria-label="Cancel Navigation"

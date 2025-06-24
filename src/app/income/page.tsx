@@ -1,10 +1,7 @@
 'use client'
 import { useState, useMemo } from "react";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
-import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import { Button, Input, Label } from "@/components/atoms";
+import { Card, CardContent, CardDescription, CardHeader, CardTitle, Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/molecules";
 import { useCopilotReadable, useCopilotAction } from "@copilotkit/react-core";
 
 interface WorkDay {
@@ -177,7 +174,7 @@ export default function IncomePage() {
 
     // Empty cells for days before the first day of the month
     for (let i = 0; i < firstDay; i++) {
-      days.push(<div key={`empty-${i}`} className="h-12"></div>);
+      days.push(<div key={`empty-${i}`} className="calendar-cell" style={{visibility: 'hidden'}}></div>);
     }
 
     // Days of the month
@@ -190,19 +187,17 @@ export default function IncomePage() {
         <div
           key={day}
           onClick={() => handleDayClick(day)}
-          className={`h-16 border border-gray-200 cursor-pointer hover:bg-gray-50 flex flex-col items-center justify-center text-sm relative group ${
-            isWork ? 'bg-green-100 hover:bg-green-200 border-green-300' : ''
-          }`}
+          className={`calendar-cell group ${isWork ? 'is-work-day' : ''}`}
         >
-          <span className="font-medium">{day}</span>
+          <span className="day-number">{day}</span>
           {workDayData && (
-            <span className="text-xs text-green-700">€{workDayData.dailyEarnings}</span>
+            <span className="earnings">€{workDayData.dailyEarnings}</span>
           )}
           {!isWork && (
             <Button
               size="sm"
               variant="ghost"
-              className="absolute top-0 right-0 h-4 w-4 p-0 opacity-0 group-hover:opacity-100 hover:bg-blue-500 hover:text-white"
+              className="absolute top-0 right-0 w-4 h-4 p-0 opacity-0 group-hover:opacity-100 hover:bg-blue hover:text-white text-xs border-none shadow-none"
               onClick={(e) => handleQuickAdd(day, e)}
               title="Quick add: 8h at €37/hour"
             >
@@ -392,10 +387,10 @@ Potential earnings if all weekdays worked: €${weekdays.length * 8 * 37} (${(we
 
   return (
     <div className="p-6 space-y-6">
-      <div className="flex items-center justify-between">
+      <div className="flex flex-col md:flex-row md:items-center justify-between mb-6 gap-4">
         <div>
-          <h1 className="text-3xl font-bold">Income Tracking</h1>
-          <p className="text-gray-600">Track your work days and calculate monthly income</p>
+          <h1 className="text-3xl md:text-4xl font-black uppercase tracking-wide mb-2">Income Tracking</h1>
+          <p className="text-gray-600 font-bold">Track your work days and calculate monthly income</p>
         </div>
         <select
           value={`${selectedYear}-${selectedMonth}`}
@@ -404,7 +399,6 @@ Potential earnings if all weekdays worked: €${weekdays.length * 8 * 37} (${(we
             setSelectedYear(parseInt(year));
             setSelectedMonth(parseInt(month));
           }}
-          className="px-4 py-2 border border-gray-300 rounded-md"
         >
           {Array.from({ length: 24 }, (_, i) => {
             const date = new Date();
@@ -418,91 +412,89 @@ Potential earnings if all weekdays worked: €${weekdays.length * 8 * 37} (${(we
         </select>
       </div>
 
-      <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
-        {/* Monthly Summary Cards */}
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Total Earnings</CardTitle>
-            <span className="text-gray-500">💰</span>
-          </CardHeader>
-          <CardContent>
-            <div className="space-y-1">
-              <div className="text-2xl font-bold">€{currentMonthData.totalEarnings.toFixed(2)}</div>
-              <div className="text-sm text-muted-foreground">
-                {convertCurrency(currentMonthData.totalEarnings).ron.toFixed(2)} RON
-              </div>
-              <div className="text-sm text-muted-foreground">
-                ${convertCurrency(currentMonthData.totalEarnings).usd.toFixed(2)} USD
-              </div>
+      {/* Monthly Summary Cards - Brutalist Style */}
+      <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-4 md:gap-6">
+        <div className="card-brutal bg-yellow">
+          <div className="card-brutal-header">
+            <h3 className="card-brutal-title text-sm">💰 Total Earnings</h3>
+          </div>
+          <div className="card-brutal-content">
+            <div className="text-3xl font-black mb-2">€{currentMonthData.totalEarnings.toFixed(2)}</div>
+            <div className="text-sm font-bold opacity-80 mb-1">
+              {convertCurrency(currentMonthData.totalEarnings).ron.toFixed(2)} RON
             </div>
-            <p className="text-xs text-muted-foreground mt-2">
+            <div className="text-sm font-bold opacity-80 mb-2">
+              ${convertCurrency(currentMonthData.totalEarnings).usd.toFixed(2)} USD
+            </div>
+            <p className="text-xs font-bold uppercase tracking-wide">
               {currentMonthData.workDaysCount} work days
             </p>
-          </CardContent>
-        </Card>
+          </div>
+        </div>
 
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Total Hours</CardTitle>
-            <span className="text-gray-500">⏰</span>
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold">{currentMonthData.totalHours}</div>
-            <p className="text-xs text-muted-foreground">
+        <div className="card-brutal bg-blue">
+          <div className="card-brutal-header">
+            <h3 className="card-brutal-title text-sm">⏰ Total Hours</h3>
+          </div>
+          <div className="card-brutal-content">
+            <div className="text-3xl font-black mb-2">{currentMonthData.totalHours}</div>
+            <p className="text-xs font-bold uppercase tracking-wide opacity-80">
               hours worked this month
             </p>
-          </CardContent>
-        </Card>
+          </div>
+        </div>
 
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Average Rate</CardTitle>
-            <span className="text-gray-500">📈</span>
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold">€{currentMonthData.averageHourlyRate.toFixed(2)}</div>
-            <p className="text-xs text-muted-foreground">
+        <div className="card-brutal bg-green">
+          <div className="card-brutal-header">
+            <h3 className="card-brutal-title text-sm">📈 Average Rate</h3>
+          </div>
+          <div className="card-brutal-content">
+            <div className="text-3xl font-black mb-2">€{currentMonthData.averageHourlyRate.toFixed(2)}</div>
+            <p className="text-xs font-bold uppercase tracking-wide opacity-80">
               per hour average
             </p>
-          </CardContent>
-        </Card>
+          </div>
+        </div>
 
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Work Days</CardTitle>
-            <span className="text-gray-500">📅</span>
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold">{currentMonthData.workDaysCount}</div>
-            <p className="text-xs text-muted-foreground">
+        <div className="card-brutal bg-purple">
+          <div className="card-brutal-header">
+            <h3 className="card-brutal-title text-sm">📅 Work Days</h3>
+          </div>
+          <div className="card-brutal-content">
+            <div className="text-3xl font-black mb-2">{currentMonthData.workDaysCount}</div>
+            <p className="text-xs font-bold uppercase tracking-wide opacity-80">
               days this month
             </p>
-          </CardContent>
-        </Card>
+          </div>
+        </div>
       </div>
 
-      {/* Calendar */}
-      <Card>
-        <CardHeader>
-          <CardTitle>{monthNames[selectedMonth]} {selectedYear}</CardTitle>
-          <CardDescription>
+      {/* Calendar - Brutalist Style */}
+      <div className="card-brutal">
+        <div className="card-brutal-header">
+          <h2 className="card-brutal-title">{monthNames[selectedMonth]} {selectedYear}</h2>
+        </div>
+        <div className="card-brutal-content">
+          <p className="text-sm font-bold mb-4 uppercase tracking-wide">
             Click on any day to add or edit work hours. Green days indicate work days.
             Hover over free days to see the quick add button (⚡) for 8h at €37/hour.
-          </CardDescription>
-        </CardHeader>
-        <CardContent>
-          <div className="grid grid-cols-7 gap-1 mb-4">
+          </p>
+          
+          {/* Calendar Header */}
+          <div className="calendar-header">
             {['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'].map(day => (
-              <div key={day} className="h-8 flex items-center justify-center font-medium text-gray-500">
+              <div key={day} className="calendar-header-day">
                 {day}
               </div>
             ))}
           </div>
-          <div className="grid grid-cols-7 gap-1">
+          
+          {/* Calendar Grid */}
+          <div className="calendar-grid">
             {renderCalendar()}
           </div>
-        </CardContent>
-      </Card>
+        </div>
+      </div>
 
       {/* Work Day Dialog */}
       <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
@@ -564,7 +556,7 @@ Potential earnings if all weekdays worked: €${weekdays.length * 8 * 37} (${(we
                 <div className="space-x-2">
                   {isWorkDay(editingDay.date) && (
                     <Button
-                      variant="destructive"
+                      variant="danger"
                       onClick={() => handleDeleteWorkDay(editingDay.id)}
                     >
                       Delete
@@ -572,7 +564,7 @@ Potential earnings if all weekdays worked: €${weekdays.length * 8 * 37} (${(we
                   )}
                 </div>
                 <div className="space-x-2">
-                  <Button variant="outline" onClick={() => setIsDialogOpen(false)}>
+                  <Button variant="secondary" onClick={() => setIsDialogOpen(false)}>
                     Cancel
                   </Button>
                   <Button onClick={() => handleSaveWorkDay(editingDay)}>
