@@ -9,17 +9,19 @@
     "lint": "next lint"
   },
   "dependencies": {
-    "@copilotkit/react-core": "^1.8.12-next.3",
-    "@copilotkit/react-textarea": "^1.8.12-next.3",
-    "@copilotkit/react-ui": "^1.8.12-next.3",
-    "@copilotkit/runtime": "^1.8.12-next.3",
+    "@copilotkit/react-core": "^1.8.12",
+    "@copilotkit/react-textarea": "^1.8.12",
+    "@copilotkit/react-ui": "^1.8.12",
+    "@copilotkit/runtime": "^1.8.12",
+    "@libsql/client": "^0.14.0",
     "@tailwindcss/postcss": "^4.1.10",
     "next": "14.2.14",
     "openai": "^4.96.2",
     "postcss": "^8.5.6",
     "react": "^18",
     "react-dom": "^18",
-    "tailwindcss": "^4.1.10"
+    "tailwindcss": "^4.1.10",
+    "zod": "^3.25.67"
   },
   "devDependencies": {
     "@types/node": "^20",

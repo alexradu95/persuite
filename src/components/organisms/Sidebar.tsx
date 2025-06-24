@@ -53,7 +53,6 @@ const Sidebar = React.forwardRef<HTMLDivElement, SidebarProps>(
           `}
           style={{ 
             width: '280px',
-            boxShadow: '10px 10px 0px #000000'
           }}
         >
           {/* Sidebar Header */}

@@ -9,7 +9,7 @@ interface AppHeaderProps {
 }
 
 const AppHeader = React.forwardRef<HTMLElement, AppHeaderProps>(
-  ({ title = "Working Days Tracker", subtitle, actions, className = "" }, ref) => {
+  ({ title = "Persuite", subtitle = "Your own personal software", actions, className = "" }, ref) => {
     const classes = `flex h-16 items-center justify-between border-b border-thick border-black px-4 md:px-8 bg-white shadow-brutal ${className}`
     
     return (

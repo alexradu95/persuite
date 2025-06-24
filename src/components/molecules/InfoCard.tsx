@@ -27,21 +27,22 @@ const InfoCard = React.forwardRef<HTMLDivElement, InfoCardProps>(
       boxShadow: '6px 6px 0px #000000'
     }
     
-    // Color-specific background classes using standard Tailwind colors
+    // Color-specific background classes - no text color here since we set it conditionally
     const colorClasses = {
       yellow: "bg-amber-400 text-black",
-      blue: "bg-blue-500 text-white", 
-      green: "bg-emerald-500 text-white",
-      purple: "bg-purple-500 text-white",
-      red: "bg-red-500 text-white",
-      orange: "bg-orange-500 text-white",
-      pink: "bg-pink-500 text-white"
+      blue: "bg-blue-500", 
+      green: "bg-emerald-500",
+      purple: "bg-purple-500",
+      red: "bg-red-500",
+      orange: "bg-orange-500",
+      pink: "bg-pink-500"
     }
     
     // Border color for header (black for yellow, white for others)
     const headerBorderColor = color === 'yellow' ? 'border-black' : 'border-white'
     
-    const cardClasses = `${baseClasses} ${colorClasses[color]} ${className}`
+    const textColorClass = color === 'yellow' ? 'text-black' : 'text-white'
+    const cardClasses = `${baseClasses} ${colorClasses[color]} ${textColorClass} ${className}`
     
     return (
       <div ref={ref} className={cardClasses} style={shadowStyle}>
