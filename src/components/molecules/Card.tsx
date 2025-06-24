@@ -18,15 +18,46 @@ const Card = React.forwardRef<HTMLDivElement, CardProps>(
     children,
     ...props 
   }, ref) => {
-    const baseClasses = "bg-white border-thick border-black"
+    const baseClasses = "bg-white border-[5px] border-black"
     
-    const variantClasses = {
-      default: shadow ? "shadow-brutal" : "",
-      colored: shadow ? `shadow-brutal-${color}` : `border-${color}`,
-      minimal: "border shadow-none",
+    // Map color to Tailwind color classes
+    const colorMap = {
+      yellow: "border-amber-400",
+      red: "border-red-500",
+      blue: "border-blue-500", 
+      green: "border-emerald-500",
+      purple: "border-purple-500",
+      pink: "border-pink-500",
+      orange: "border-orange-500"
     }
     
-    const hoverClasses = hover ? "transition-fast hover:transform hover:shadow-brutal-lg cursor-pointer" : ""
+    // Custom shadows for neo-brutalism
+    const shadowStyles = {
+      default: shadow ? { boxShadow: '6px 6px 0px #000000' } : {},
+      colored: shadow ? {
+        yellow: { boxShadow: '6px 6px 0px #fbbf24' },
+        red: { boxShadow: '6px 6px 0px #ef4444' },
+        blue: { boxShadow: '6px 6px 0px #3b82f6' },
+        green: { boxShadow: '6px 6px 0px #10b981' },
+        purple: { boxShadow: '6px 6px 0px #8b5cf6' },
+        pink: { boxShadow: '6px 6px 0px #ec4899' },
+        orange: { boxShadow: '6px 6px 0px #f97316' }
+      }[color] : {},
+      minimal: {}
+    }
+    
+    const variantClasses = {
+      default: "",
+      colored: colorMap[color],
+      minimal: "border-[3px]",
+    }
+    
+    const hoverClasses = hover ? "transition-all duration-200 hover:-translate-x-0.5 hover:-translate-y-0.5 cursor-pointer" : ""
+    const hoverStyle = hover ? {
+      ':hover': {
+        boxShadow: '10px 10px 0px #000000'
+      }
+    } : {}
     
     const classes = `${baseClasses} ${variantClasses[variant]} ${hoverClasses} ${className}`
     
@@ -34,6 +65,10 @@ const Card = React.forwardRef<HTMLDivElement, CardProps>(
       <div
         ref={ref}
         className={classes}
+        style={{
+          ...shadowStyles[variant],
+          ...hoverStyle
+        }}
         {...props}
       >
         {children}
@@ -45,7 +80,7 @@ Card.displayName = "Card"
 
 const CardHeader = React.forwardRef<HTMLDivElement, React.HTMLAttributes<HTMLDivElement>>(
   ({ className = "", children, ...props }, ref) => {
-    const classes = `flex justify-between items-center p-6 border-b border-black ${className}`
+    const classes = `flex justify-between items-center p-6 border-b-[3px] border-black ${className}`
     
     return (
       <div
@@ -117,7 +152,7 @@ CardContent.displayName = "CardContent"
 
 const CardFooter = React.forwardRef<HTMLDivElement, React.HTMLAttributes<HTMLDivElement>>(
   ({ className = "", children, ...props }, ref) => {
-    const classes = `flex items-center p-6 border-t border-black ${className}`
+    const classes = `flex items-center p-6 border-t-[3px] border-black ${className}`
     
     return (
       <div

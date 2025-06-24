@@ -19,15 +19,41 @@ interface InfoCardProps {
 
 const InfoCard = React.forwardRef<HTMLDivElement, InfoCardProps>(
   ({ title, icon, value, subtitle, subValues, color = 'yellow', className = "" }, ref) => {
-    const cardClasses = `card-brutal bg-${color} ${className}`
+    // Neo-brutalism styling with thick borders and hard shadows
+    const baseClasses = "bg-white border-[5px] border-black p-6 relative"
+    
+    // Custom shadow for neo-brutalism effect
+    const shadowStyle = {
+      boxShadow: '6px 6px 0px #000000'
+    }
+    
+    // Color-specific background classes using standard Tailwind colors
+    const colorClasses = {
+      yellow: "bg-amber-400 text-black",
+      blue: "bg-blue-500 text-white", 
+      green: "bg-emerald-500 text-white",
+      purple: "bg-purple-500 text-white",
+      red: "bg-red-500 text-white",
+      orange: "bg-orange-500 text-white",
+      pink: "bg-pink-500 text-white"
+    }
+    
+    // Border color for header (black for yellow, white for others)
+    const headerBorderColor = color === 'yellow' ? 'border-black' : 'border-white'
+    
+    const cardClasses = `${baseClasses} ${colorClasses[color]} ${className}`
     
     return (
-      <div ref={ref} className={cardClasses}>
-        <div className="card-brutal-header">
-          <h3 className="card-brutal-title text-sm">{icon} {title}</h3>
+      <div ref={ref} className={cardClasses} style={shadowStyle}>
+        <div className={`flex justify-between items-center mb-4 pb-3 border-b-[3px] ${headerBorderColor}`}>
+          <h3 className="font-black text-sm uppercase tracking-wide m-0" style={{ fontFamily: 'Arial Black, Arial, sans-serif' }}>
+            {icon} {title}
+          </h3>
         </div>
-        <div className="card-brutal-content">
-          <div className="text-3xl font-black mb-2">{value}</div>
+        <div className="mt-4">
+          <div className="text-3xl font-black mb-2" style={{ fontFamily: 'Arial Black, Arial, sans-serif' }}>
+            {value}
+          </div>
           
           {subValues && subValues.length > 0 && (
             <div className="space-y-1 mb-2">
