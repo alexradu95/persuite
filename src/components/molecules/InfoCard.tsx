@@ -30,23 +30,19 @@ const InfoCard = React.forwardRef<HTMLDivElement, InfoCardProps>(
     // Color-specific background classes - no text color here since we set it conditionally
     const colorClasses = {
       yellow: "bg-amber-400 text-black",
-      blue: "bg-blue-500", 
-      green: "bg-emerald-500",
-      purple: "bg-purple-500",
-      red: "bg-red-500",
-      orange: "bg-orange-500",
-      pink: "bg-pink-500"
+      blue: "bg-blue-500 text-black", 
+      green: "bg-emerald-500 text-black",
+      purple: "bg-purple-500 text-black",
+      red: "bg-red-500 text-black",
+      orange: "bg-orange-500 text-black",
+      pink: "bg-pink-500 text-black"
     }
     
-    // Border color for header (black for yellow, white for others)
-    const headerBorderColor = color === 'yellow' ? 'border-black' : 'border-white'
-    
-    const textColorClass = color === 'yellow' ? 'text-black' : 'text-white'
-    const cardClasses = `${baseClasses} ${colorClasses[color]} ${textColorClass} ${className}`
+    const cardClasses = `${baseClasses} ${colorClasses[color]} ${className} text-black`
     
     return (
       <div ref={ref} className={cardClasses} style={shadowStyle}>
-        <div className={`flex justify-between items-center mb-4 pb-3 border-b-[3px] ${headerBorderColor}`}>
+        <div className={`flex justify-between items-center mb-4 pb-3 border-b-[3px] border-black`}>
           <h3 className="font-black text-sm uppercase tracking-wide m-0" style={{ fontFamily: 'Arial Black, Arial, sans-serif' }}>
             {icon} {title}
           </h3>

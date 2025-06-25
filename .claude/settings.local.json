@@ -10,7 +10,10 @@
       "Bash(grep:*)",
       "Bash(npm run lint)",
       "Bash(find:*)",
-      "Bash(ls:*)"
+      "Bash(ls:*)",
+      "Bash(pkill:*)",
+      "Bash(npm run:*)",
+      "Bash(npm test:*)"
     ],
     "deny": []
   }

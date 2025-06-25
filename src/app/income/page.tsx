@@ -207,6 +207,36 @@ export default function IncomePage() {
     }
   };
 
+  const handleQuickDelete = async (day: number, event: React.MouseEvent) => {
+    event.stopPropagation();
+    const dateString = `${selectedYear}-${String(selectedMonth + 1).padStart(2, '0')}-${String(day).padStart(2, '0')}`;
+    const workDayData = getWorkDayData(dateString);
+    
+    if (!workDayData) return; // Don't delete if not a work day
+    
+    // Show confirmation dialog
+    const earnings = incomeService.calculateEarnings(workDayData.hours, workDayData.hourlyRate);
+    const confirmed = window.confirm(
+      `Delete work day for ${dateString}?\n\n` +
+      `Hours: ${workDayData.hours}\n` +
+      `Rate: €${workDayData.hourlyRate}/hour\n` +
+      `Earnings: €${earnings}\n\n` +
+      `This action cannot be undone.`
+    );
+    
+    if (!confirmed) return;
+    
+    try {
+      await incomeService.deleteWorkDay(workDayData.id);
+      
+      // Reload monthly data
+      const data = await incomeService.getMonthlyData(selectedMonth + 1, selectedYear);
+      setMonthlyData(data);
+    } catch (error) {
+      console.error('Failed to quick delete work day:', error);
+    }
+  };
+
   const getFreeDaysInMonth = useMemo(() => {
     const monthKey = `${selectedYear}-${String(selectedMonth + 1).padStart(2, '0')}`;
     const daysInMonth = getDaysInMonth(selectedMonth, selectedYear);
@@ -276,6 +306,17 @@ export default function IncomePage() {
               title="Quick add: 8h at €37/hour"
             >
               <span>⚡</span>
+            </Button>
+          )}
+          {isWork && (
+            <Button
+              size="sm"
+              variant="ghost"
+              className="absolute top-0 right-0 w-4 h-4 p-0 opacity-0 group-hover:opacity-100 hover:bg-red-500 hover:text-white text-xs border-none shadow-none"
+              onClick={(e) => handleQuickDelete(day, e)}
+              title="Quick delete work day"
+            >
+              <span>🗑️</span>
             </Button>
           )}
         </div>
@@ -574,6 +615,7 @@ Potential earnings if all weekdays worked: €${weekdays.length * 8 * 37} (${(we
           <p className="text-sm font-bold mb-4 uppercase tracking-wide">
             Click on any day to add or edit work hours. Green days indicate work days.
             Hover over free days to see the quick add button (⚡) for 8h at €37/hour.
+            Hover over work days to see the quick delete button (🗑️).
           </p>
           
           {/* Calendar Header */}
