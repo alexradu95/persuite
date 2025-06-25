@@ -588,13 +588,13 @@ Potential earnings if all weekdays worked: €${weekdays.length * 8 * 37} (${(we
         <InfoCard
           title="Taxes to be Paid"
           icon="📈"
-          value={incomeService.isLoading ? "Loading..." : `${(convertCurrency(currentMonthData.totalEarnings).ron * 0.1).toFixed(2)} RON`}
+          value={incomeService.isLoading ? "Loading..." : `${((convertCurrency(currentMonthData.totalEarnings).ron * 0.1) + ((132000 * 0.25) / 12) + ((132000 * 0.10) / 12)).toFixed(2)} RON`}
           subValues={incomeService.isLoading ? [] : [
             { value: (convertCurrency(currentMonthData.totalEarnings).ron * 0.1).toFixed(2), label: "Impozit" },
-            { value: (convertCurrency(currentMonthData.totalEarnings).ron * 0.25).toFixed(2), label: "CAS" },
-            { value: (convertCurrency(currentMonthData.totalEarnings).ron * 0.10).toFixed(2), label: "CASS" }
+            { value: ((132000 * 0.25) / 12).toFixed(2), label: "CAS" },
+            { value: ((132000 * 0.10) / 12).toFixed(2), label: "CASS" }
           ]}
-          subtitle="to be reserved for taxes"
+          subtitle="monthly taxes to reserve"
           color="green"
         />
       </div>
