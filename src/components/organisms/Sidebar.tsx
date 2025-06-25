@@ -83,9 +83,9 @@ const Sidebar = React.forwardRef<HTMLDivElement, SidebarProps>(
             <ul className="list-none p-0 m-0">
               {navItems.map((item) => {
                 const isActive = pathname === item.href
-                const baseClasses = "block p-4 border-[3px] border-black bg-white text-black cursor-pointer relative overflow-hidden no-underline transition-all duration-200 mb-2"
+                const baseClasses = "block p-4 mb-4 border-[3px] border-black bg-white text-black cursor-pointer relative overflow-hidden no-underline transition-all duration-200 mb-2"
                 const activeClasses = isActive 
-                  ? "bg-black text-white transform -translate-x-0.5 -translate-y-0.5" 
+                  ? "transform -translate-x-0.5 -translate-y-0.5" 
                   : "hover:bg-amber-400 hover:transform hover:-translate-x-0.75 hover:-translate-y-0.75"
                 
                 const shadowStyle = isActive 
