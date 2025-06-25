@@ -560,7 +560,7 @@ Potential earnings if all weekdays worked: €${weekdays.length * 8 * 37} (${(we
       )}
 
       {/* Monthly Summary Cards */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-4 md:gap-6">
+      <div className="grid grid-cols-1 sm:grid-cols-3 md:grid-cols-3 gap-4 md:gap-6">
         <InfoCard
           title="Total Earnings"
           icon="💰"
@@ -576,25 +576,26 @@ Potential earnings if all weekdays worked: €${weekdays.length * 8 * 37} (${(we
         <InfoCard
           title="Total Hours"
           icon="⏰"
-          value={currentMonthData.totalHours}
+          value={incomeService.isLoading ? "Loading..." : currentMonthData.totalHours}
+          subValues={incomeService.isLoading ? [] : [
+            { value: currentMonthData.workDaysCount, label: "Days Worked" },
+            { value: getFreeDaysInMonth.length, label: "Free work days" }
+          ]}
           subtitle="hours worked this month"
           color="blue"
         />
 
         <InfoCard
-          title="Average Rate"
+          title="Taxes to be Paid"
           icon="📈"
-          value={`€${currentMonthData.averageHourlyRate.toFixed(2)}`}
-          subtitle="per hour average"
+          value={incomeService.isLoading ? "Loading..." : `${(convertCurrency(currentMonthData.totalEarnings).ron * 0.1).toFixed(2)} RON`}
+          subValues={incomeService.isLoading ? [] : [
+            { value: (convertCurrency(currentMonthData.totalEarnings).ron * 0.1).toFixed(2), label: "Impozit" },
+            { value: (convertCurrency(currentMonthData.totalEarnings).ron * 0.25).toFixed(2), label: "CAS" },
+            { value: (convertCurrency(currentMonthData.totalEarnings).ron * 0.10).toFixed(2), label: "CASS" }
+          ]}
+          subtitle="to be reserved for taxes"
           color="green"
-        />
-
-        <InfoCard
-          title="Work Days"
-          icon="📅"
-          value={currentMonthData.workDaysCount}
-          subtitle="days this month"
-          color="purple"
         />
       </div>
 
