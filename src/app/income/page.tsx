@@ -4,15 +4,16 @@ import { useRouter, useSearchParams } from "next/navigation";
 import { Button, Input, Label } from "@/components/atoms";
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, InfoCard } from "@/components/molecules";
 import { useCopilotReadable, useCopilotAction } from "@copilotkit/react-core";
-import { useIncomeService } from "@/lib/hooks/use-income-service";
-import { WorkDay, MonthlyData, CreateWorkDay, UpdateWorkDay } from "@/lib/db/types";
+import { useModernIncomeService } from "@/lib/hooks/use-modern-income-service";
+import { Contract, WorkDayEntry, CreateContract, CreateWorkDayEntry } from "@/lib/db/types";
+import { MonthlyData } from "@/lib/domains/income/services/modern-income-service";
 
 const monthNames = [
   "January", "February", "March", "April", "May", "June",
   "July", "August", "September", "October", "November", "December"
 ];
 
-export default function IncomePage() {
+export default function ModernIncomePage() {
   const router = useRouter();
   const searchParams = useSearchParams();
   
@@ -20,7 +21,7 @@ export default function IncomePage() {
   const [selectedMonth, setSelectedMonth] = useState(() => {
     const monthParam = searchParams.get('month');
     const currentMonth = new Date().getMonth();
-    return monthParam && !isNaN(parseInt(monthParam)) ? parseInt(monthParam) - 1 : currentMonth; // URL uses 1-12, state uses 0-11
+    return monthParam && !isNaN(parseInt(monthParam)) ? parseInt(monthParam) - 1 : currentMonth;
   });
   
   const [selectedYear, setSelectedYear] = useState(() => {
@@ -29,42 +30,64 @@ export default function IncomePage() {
     return yearParam && !isNaN(parseInt(yearParam)) ? parseInt(yearParam) : currentYear;
   });
   
-  // Exchange rates (you might want to fetch these from an API in a real app)
+  // Exchange rates
   const exchangeRates = useMemo(() => ({
-    EUR_TO_RON: 4.97,  // 1 EUR = 4.97 RON (approximate)
-    EUR_TO_USD: 1.07   // 1 EUR = 1.07 USD (approximate)
+    EUR_TO_RON: 4.97,
+    EUR_TO_USD: 1.07
   }), []);
   
   const [monthlyData, setMonthlyData] = useState<MonthlyData | null>(null);
-  const [editingDay, setEditingDay] = useState<WorkDay | null>(null);
+  const [contracts, setContracts] = useState<Contract[]>([]);
+  const [selectedDate, setSelectedDate] = useState<string | null>(null);
   const [isDialogOpen, setIsDialogOpen] = useState(false);
+  const [isContractDialogOpen, setIsContractDialogOpen] = useState(false);
+  const [editingEntries, setEditingEntries] = useState<WorkDayEntry[]>([]);
+  const [newContract, setNewContract] = useState<CreateContract>({
+    id: '',
+    name: '',
+    hourlyRate: 37,
+    description: ''
+  });
   
-  const incomeService = useIncomeService();
+  const incomeService = useModernIncomeService();
 
   // Function to update URL when month/year changes
   const updateURL = useMemo(() => (month: number, year: number) => {
     const params = new URLSearchParams();
-    params.set('month', (month + 1).toString()); // Convert 0-11 to 1-12 for URL
+    params.set('month', (month + 1).toString());
     params.set('year', year.toString());
     router.push(`/income?${params.toString()}`, { scroll: false });
   }, [router]);
 
-  // Handle browser navigation (back/forward buttons)
+  // Handle browser navigation
   useEffect(() => {
     const monthParam = searchParams.get('month');
     const yearParam = searchParams.get('year');
     
     if (monthParam && yearParam && !isNaN(parseInt(monthParam)) && !isNaN(parseInt(yearParam))) {
-      const urlMonth = parseInt(monthParam) - 1; // Convert 1-12 to 0-11
+      const urlMonth = parseInt(monthParam) - 1;
       const urlYear = parseInt(yearParam);
       
-      // Only update if different from current state
       if (urlMonth !== selectedMonth || urlYear !== selectedYear) {
         setSelectedMonth(urlMonth);
         setSelectedYear(urlYear);
       }
     }
-  }, [searchParams]); // React to URL changes only
+  }, [searchParams, selectedMonth, selectedYear]);
+
+  // Load contracts on mount
+  useEffect(() => {
+    const loadContracts = async () => {
+      try {
+        const contractsData = await incomeService.getAllContracts();
+        setContracts(contractsData);
+      } catch (error) {
+        console.error('Failed to load contracts:', error);
+      }
+    };
+
+    loadContracts();
+  }, [incomeService]);
 
   // Load monthly data when month/year changes
   useEffect(() => {
@@ -78,13 +101,14 @@ export default function IncomePage() {
     };
 
     loadMonthlyData();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [selectedMonth, selectedYear]);
+  }, [selectedMonth, selectedYear, incomeService]);
 
   const currentMonthData = monthlyData || {
     month: monthNames[selectedMonth],
     year: selectedYear,
-    workDays: [],
+    workDayEntries: [],
+    contracts: [],
+    entriesGroupedByDate: {},
     totalHours: 0,
     totalEarnings: 0,
     averageHourlyRate: 0,
@@ -97,153 +121,145 @@ export default function IncomePage() {
 
   const getFirstDayOfMonth = (month: number, year: number) => {
     const firstDay = new Date(year, month, 1).getDay();
-    // Convert Sunday (0) to 6, Monday (1) to 0, etc.
     return firstDay === 0 ? 6 : firstDay - 1;
   };
 
+  const getEntriesForDate = (date: string) => {
+    return currentMonthData.entriesGroupedByDate[date] || [];
+  };
+
   const isWorkDay = (date: string) => {
-    return currentMonthData.workDays.some(day => day.date === date);
+    return getEntriesForDate(date).length > 0;
   };
 
-  const getWorkDayData = (date: string) => {
-    return currentMonthData.workDays.find(day => day.date === date);
+  const calculateDayEarnings = (date: string) => {
+    const entries = getEntriesForDate(date);
+    return entries.reduce((total, entry) => {
+      const contract = contracts.find(c => c.id === entry.contractId);
+      if (!contract) return total;
+      return total + (entry.hours * contract.hourlyRate);
+    }, 0);
   };
 
-  const handleDayClick = (day: number) => {
+  const handleDayClick = async (day: number) => {
     const dateString = `${selectedYear}-${String(selectedMonth + 1).padStart(2, '0')}-${String(day).padStart(2, '0')}`;
-    const existingWorkDay = getWorkDayData(dateString);
+    const date = new Date(selectedYear, selectedMonth, day);
     
-    if (existingWorkDay) {
-      setEditingDay(existingWorkDay);
-    } else {
-      // Create a temporary work day for editing
-      const tempWorkDay: WorkDay = {
-        id: `temp-${Date.now()}`,
-        date: dateString,
-        hours: 8,
-        hourlyRate: 37,
-        notes: ''
-      };
-      setEditingDay(tempWorkDay);
+    try {
+      const existingEntries = await incomeService.getWorkDayEntriesByDate(date);
+      setEditingEntries(existingEntries);
+      setSelectedDate(dateString);
+      setIsDialogOpen(true);
+    } catch (error) {
+      console.error('Failed to load entries for date:', error);
     }
-    setIsDialogOpen(true);
   };
 
-  const handleSaveWorkDay = async (workDay: WorkDay) => {
+  const handleAddEntry = () => {
+    if (!selectedDate || contracts.length === 0) return;
+    
+    const newEntry: WorkDayEntry = {
+      id: `temp-${Date.now()}`,
+      date: new Date(selectedDate),
+      contractId: contracts[0].id,
+      hours: 8,
+      notes: '',
+      createdAt: new Date(),
+      updatedAt: new Date()
+    };
+    
+    setEditingEntries([...editingEntries, newEntry]);
+  };
+
+  const handleUpdateEntry = (index: number, updates: Partial<WorkDayEntry>) => {
+    const updated = [...editingEntries];
+    updated[index] = { ...updated[index], ...updates };
+    setEditingEntries(updated);
+  };
+
+  const handleRemoveEntry = (index: number) => {
+    const updated = [...editingEntries];
+    updated.splice(index, 1);
+    setEditingEntries(updated);
+  };
+
+  const handleSaveEntries = async () => {
     try {
-      const isExisting = !workDay.id.startsWith('temp-');
-      
-      if (isExisting) {
-        // Update existing work day
-        const updateData: UpdateWorkDay = {
-          id: workDay.id,
-          hours: workDay.hours,
-          hourlyRate: workDay.hourlyRate,
-          notes: workDay.notes,
-        };
-        await incomeService.updateWorkDay(updateData);
-      } else {
-        // Create new work day
-        const createData: CreateWorkDay = {
-          id: Date.now().toString(),
-          date: workDay.date,
-          hours: workDay.hours,
-          hourlyRate: workDay.hourlyRate,
-          notes: workDay.notes,
-        };
-        await incomeService.createWorkDay(createData);
+      for (const entry of editingEntries) {
+        if (entry.id.startsWith('temp-')) {
+          // Create new entry
+          const createData: CreateWorkDayEntry = {
+            id: Date.now().toString() + Math.random().toString(36).substr(2, 9),
+            date: entry.date,
+            contractId: entry.contractId,
+            hours: entry.hours,
+            notes: entry.notes
+          };
+          await incomeService.createWorkDayEntry(createData);
+        } else {
+          // Update existing entry
+          await incomeService.updateWorkDayEntry({
+            id: entry.id,
+            contractId: entry.contractId,
+            hours: entry.hours,
+            notes: entry.notes
+          });
+        }
       }
-
-      // Reload monthly data
-      const data = await incomeService.getMonthlyData(selectedMonth + 1, selectedYear);
-      setMonthlyData(data);
-      
-      setIsDialogOpen(false);
-      setEditingDay(null);
-    } catch (error) {
-      console.error('Failed to save work day:', error);
-      // You might want to show a toast notification here
-    }
-  };
-
-  const handleDeleteWorkDay = async (workDayId: string) => {
-    try {
-      await incomeService.deleteWorkDay(workDayId);
       
       // Reload monthly data
       const data = await incomeService.getMonthlyData(selectedMonth + 1, selectedYear);
       setMonthlyData(data);
       
       setIsDialogOpen(false);
-      setEditingDay(null);
+      setEditingEntries([]);
+      setSelectedDate(null);
     } catch (error) {
-      console.error('Failed to delete work day:', error);
-      // You might want to show a toast notification here
+      console.error('Failed to save entries:', error);
     }
   };
 
-  const handleQuickAdd = async (day: number, event: React.MouseEvent) => {
-    event.stopPropagation();
-    const dateString = `${selectedYear}-${String(selectedMonth + 1).padStart(2, '0')}-${String(day).padStart(2, '0')}`;
-    
-    if (isWorkDay(dateString)) return; // Don't add if already a work day
+  const handleDeleteEntry = async (entryId: string) => {
+    if (entryId.startsWith('temp-')) {
+      // Just remove from local state
+      setEditingEntries(editingEntries.filter(e => e.id !== entryId));
+      return;
+    }
     
     try {
-      const createData: CreateWorkDay = {
-        id: Date.now().toString(),
-        date: dateString,
-        hours: 8,
-        hourlyRate: 37,
-        notes: 'Quick add - 8h at €37/hour'
+      await incomeService.deleteWorkDayEntry(entryId);
+      setEditingEntries(editingEntries.filter(e => e.id !== entryId));
+      
+      // Reload monthly data
+      const data = await incomeService.getMonthlyData(selectedMonth + 1, selectedYear);
+      setMonthlyData(data);
+    } catch (error) {
+      console.error('Failed to delete entry:', error);
+    }
+  };
+
+  const handleCreateContract = async () => {
+    try {
+      const contractData: CreateContract = {
+        ...newContract,
+        id: Date.now().toString() + Math.random().toString(36).substr(2, 9)
       };
       
-      await incomeService.createWorkDay(createData);
-      
-      // Reload monthly data
-      const data = await incomeService.getMonthlyData(selectedMonth + 1, selectedYear);
-      setMonthlyData(data);
+      const created = await incomeService.createContract(contractData);
+      setContracts([...contracts, created]);
+      setIsContractDialogOpen(false);
+      setNewContract({ id: '', name: '', hourlyRate: 37, description: '' });
     } catch (error) {
-      console.error('Failed to quick add work day:', error);
-    }
-  };
-
-  const handleQuickDelete = async (day: number, event: React.MouseEvent) => {
-    event.stopPropagation();
-    const dateString = `${selectedYear}-${String(selectedMonth + 1).padStart(2, '0')}-${String(day).padStart(2, '0')}`;
-    const workDayData = getWorkDayData(dateString);
-    
-    if (!workDayData) return; // Don't delete if not a work day
-    
-    // Show confirmation dialog
-    const earnings = incomeService.calculateEarnings(workDayData.hours, workDayData.hourlyRate);
-    const confirmed = window.confirm(
-      `Delete work day for ${dateString}?\n\n` +
-      `Hours: ${workDayData.hours}\n` +
-      `Rate: €${workDayData.hourlyRate}/hour\n` +
-      `Earnings: €${earnings}\n\n` +
-      `This action cannot be undone.`
-    );
-    
-    if (!confirmed) return;
-    
-    try {
-      await incomeService.deleteWorkDay(workDayData.id);
-      
-      // Reload monthly data
-      const data = await incomeService.getMonthlyData(selectedMonth + 1, selectedYear);
-      setMonthlyData(data);
-    } catch (error) {
-      console.error('Failed to quick delete work day:', error);
+      console.error('Failed to create contract:', error);
     }
   };
 
   const getFreeDaysInMonth = useMemo(() => {
-    const monthKey = `${selectedYear}-${String(selectedMonth + 1).padStart(2, '0')}`;
     const daysInMonth = getDaysInMonth(selectedMonth, selectedYear);
     const freeDays = [];
     
     for (let day = 1; day <= daysInMonth; day++) {
-      const dateString = `${monthKey}-${String(day).padStart(2, '0')}`;
+      const dateString = `${selectedYear}-${String(selectedMonth + 1).padStart(2, '0')}-${String(day).padStart(2, '0')}`;
       if (!isWorkDay(dateString)) {
         freeDays.push({
           day,
@@ -253,7 +269,7 @@ export default function IncomePage() {
       }
     }
     return freeDays;
-  }, [selectedYear, selectedMonth, currentMonthData.workDays]);
+  }, [selectedYear, selectedMonth, currentMonthData.entriesGroupedByDate]);
 
   const convertCurrency = useMemo(() => (amountInEur: number) => {
     return {
@@ -261,7 +277,7 @@ export default function IncomePage() {
       ron: amountInEur * exchangeRates.EUR_TO_RON,
       usd: amountInEur * exchangeRates.EUR_TO_USD
     };
-  }, [exchangeRates.EUR_TO_RON, exchangeRates.EUR_TO_USD]);
+  }, [exchangeRates]);
 
   const renderCalendar = () => {
     const daysInMonth = getDaysInMonth(selectedMonth, selectedYear);
@@ -276,8 +292,9 @@ export default function IncomePage() {
     // Days of the month
     for (let day = 1; day <= daysInMonth; day++) {
       const dateString = `${selectedYear}-${String(selectedMonth + 1).padStart(2, '0')}-${String(day).padStart(2, '0')}`;
-      const workDayData = getWorkDayData(dateString);
+      const entries = getEntriesForDate(dateString);
       const isWork = isWorkDay(dateString);
+      const dayEarnings = calculateDayEarnings(dateString);
 
       days.push(
         <div
@@ -294,30 +311,11 @@ export default function IncomePage() {
           }}
         >
           <span className="font-black text-lg mb-1">{day}</span>
-          {workDayData && (
-            <span className="text-xs font-bold opacity-80">€{incomeService.calculateEarnings(workDayData.hours, workDayData.hourlyRate)}</span>
-          )}
-          {!isWork && (
-            <Button
-              size="sm"
-              variant="ghost"
-              className="absolute top-0 right-0 w-4 h-4 p-0 opacity-0 group-hover:opacity-100 hover:bg-blue-500 hover:text-white text-xs border-none shadow-none"
-              onClick={(e) => handleQuickAdd(day, e)}
-              title="Quick add: 8h at €37/hour"
-            >
-              <span>⚡</span>
-            </Button>
-          )}
           {isWork && (
-            <Button
-              size="sm"
-              variant="ghost"
-              className="absolute top-0 right-0 w-4 h-4 p-0 opacity-0 group-hover:opacity-100 hover:bg-red-500 hover:text-white text-xs border-none shadow-none"
-              onClick={(e) => handleQuickDelete(day, e)}
-              title="Quick delete work day"
-            >
-              <span>🗑️</span>
-            </Button>
+            <>
+              <span className="text-xs font-bold opacity-80">€{dayEarnings.toFixed(0)}</span>
+              <span className="text-xs font-bold opacity-60">{entries.length} {entries.length === 1 ? 'entry' : 'entries'}</span>
+            </>
           )}
         </div>
       );
@@ -328,191 +326,82 @@ export default function IncomePage() {
 
   // CopilotKit integration
   useCopilotReadable({
-    description: "Current income tracking data including work days, hours, and earnings in multiple currencies",
+    description: "Current income tracking data with contracts and work day entries",
     value: {
       currentMonth: {
         ...currentMonthData,
         totalEarningsMultiCurrency: convertCurrency(currentMonthData.totalEarnings)
       },
-      allWorkDays: currentMonthData.workDays,
+      contracts: contracts,
       selectedPeriod: `${monthNames[selectedMonth]} ${selectedYear}`,
       freeDaysThisMonth: getFreeDaysInMonth,
-      defaultRate: 37,
-      defaultHours: 8,
       exchangeRates
     },
   });
 
   useCopilotAction({
-    name: "addWorkDay",
-    description: "Add a new work day with hours and hourly rate",
+    name: "addWorkDayEntry",
+    description: "Add a new work day entry for a specific contract",
     parameters: [
       { name: "date", type: "string", description: "Date in YYYY-MM-DD format", required: true },
+      { name: "contractId", type: "string", description: "ID of the contract to use", required: true },
       { name: "hours", type: "number", description: "Number of hours worked", required: true },
-      { name: "hourlyRate", type: "number", description: "Hourly rate for this day", required: true },
-      { name: "notes", type: "string", description: "Optional notes for the work day", required: false },
+      { name: "notes", type: "string", description: "Optional notes for the work day entry", required: false },
     ],
-    handler: async ({ date, hours, hourlyRate, notes = "" }) => {
+    handler: async ({ date, contractId, hours, notes = "" }) => {
       try {
-        const createData: CreateWorkDay = {
-          id: Date.now().toString(),
-          date,
+        const contract = contracts.find(c => c.id === contractId);
+        if (!contract) {
+          return `Contract with ID ${contractId} not found. Available contracts: ${contracts.map(c => `${c.name} (${c.id})`).join(', ')}`;
+        }
+
+        const createData: CreateWorkDayEntry = {
+          id: Date.now().toString() + Math.random().toString(36).substr(2, 9),
+          date: new Date(date),
+          contractId,
           hours,
-          hourlyRate,
           notes
         };
         
-        await incomeService.createWorkDay(createData);
+        await incomeService.createWorkDayEntry(createData);
         
         // Reload monthly data
         const data = await incomeService.getMonthlyData(selectedMonth + 1, selectedYear);
         setMonthlyData(data);
         
-        const dailyEarnings = incomeService.calculateEarnings(hours, hourlyRate);
+        const dailyEarnings = hours * contract.hourlyRate;
         const earnings = convertCurrency(dailyEarnings);
-        return `Added work day for ${date}: ${hours} hours at €${hourlyRate}/hour = €${dailyEarnings} (${earnings.ron.toFixed(2)} RON, $${earnings.usd.toFixed(2)} USD)`;
+        return `Added work day entry for ${date}: ${hours} hours for ${contract.name} at €${contract.hourlyRate}/hour = €${dailyEarnings} (${earnings.ron.toFixed(2)} RON, $${earnings.usd.toFixed(2)} USD)`;
       } catch (error) {
-        return `Failed to add work day: ${error instanceof Error ? error.message : 'Unknown error'}`;
+        return `Failed to add work day entry: ${error instanceof Error ? error.message : 'Unknown error'}`;
       }
     },
   });
 
   useCopilotAction({
-    name: "addQuickWorkDays",
-    description: "Add multiple work days with default settings (8 hours at €37/hour). Can specify days by number, weekdays, or ranges.",
+    name: "createContract",
+    description: "Create a new contract with name, hourly rate, and optional description",
     parameters: [
-      { name: "days", type: "string", description: "Days to add work - can be comma-separated numbers (1,5,10), weekdays (mon,tue,wed), ranges (1-5), or 'all-weekdays'", required: true },
-      { name: "hours", type: "number", description: "Hours per day (default: 8)", required: false },
-      { name: "hourlyRate", type: "number", description: "Hourly rate (default: €37)", required: false },
-      { name: "notes", type: "string", description: "Notes for the work days", required: false },
+      { name: "name", type: "string", description: "Contract name", required: true },
+      { name: "hourlyRate", type: "number", description: "Hourly rate in EUR", required: true },
+      { name: "description", type: "string", description: "Optional contract description", required: false },
     ],
-    handler: async ({ days, hours = 8, hourlyRate = 37, notes = "Bulk added via AI" }) => {
+    handler: async ({ name, hourlyRate, description = "" }) => {
       try {
-        const monthKey = `${selectedYear}-${String(selectedMonth + 1).padStart(2, '0')}`;
-        const daysInMonth = getDaysInMonth(selectedMonth, selectedYear);
-        const workDaysToAdd: CreateWorkDay[] = [];
+        const contractData: CreateContract = {
+          id: Date.now().toString() + Math.random().toString(36).substr(2, 9),
+          name,
+          hourlyRate,
+          description
+        };
         
-        // Parse different day formats
-        if (days.toLowerCase() === 'all-weekdays') {
-          // Add all weekdays (Mon-Fri) that are free
-          for (let day = 1; day <= daysInMonth; day++) {
-            const date = new Date(selectedYear, selectedMonth, day);
-            const dayOfWeek = date.getDay(); // 0=Sun, 1=Mon, ..., 6=Sat
-            const dateString = `${monthKey}-${String(day).padStart(2, '0')}`;
-            
-            if (dayOfWeek >= 1 && dayOfWeek <= 5 && !isWorkDay(dateString)) {
-              workDaysToAdd.push({
-                id: `${Date.now()}-${day}`,
-                date: dateString,
-                hours,
-                hourlyRate,
-                notes
-              });
-            }
-          }
-        } else if (days.includes('-')) {
-          // Handle ranges like "1-5" or "10-15"
-          const [start, end] = days.split('-').map(d => parseInt(d.trim()));
-          for (let day = start; day <= Math.min(end, daysInMonth); day++) {
-            const dateString = `${monthKey}-${String(day).padStart(2, '0')}`;
-            if (!isWorkDay(dateString)) {
-              workDaysToAdd.push({
-                id: `${Date.now()}-${day}`,
-                date: dateString,
-                hours,
-                hourlyRate,
-                notes
-              });
-            }
-          }
-        } else {
-          // Handle comma-separated days or weekday names
-          const dayList = days.split(',').map(d => d.trim().toLowerCase());
-          const weekdayMap: { [key: string]: number } = {
-            'mon': 1, 'monday': 1,    // Monday = 1
-            'tue': 2, 'tuesday': 2,   // Tuesday = 2
-            'wed': 3, 'wednesday': 3, // Wednesday = 3
-            'thu': 4, 'thursday': 4,  // Thursday = 4
-            'fri': 5, 'friday': 5,    // Friday = 5
-            'sat': 6, 'saturday': 6,  // Saturday = 6
-            'sun': 0, 'sunday': 0     // Sunday = 0
-          };
-          
-          for (let day = 1; day <= daysInMonth; day++) {
-            const date = new Date(selectedYear, selectedMonth, day);
-            const dayOfWeek = date.getDay();
-            const dateString = `${monthKey}-${String(day).padStart(2, '0')}`;
-            
-            const shouldAdd = dayList.some(d => {
-              if (!isNaN(parseInt(d))) {
-                return parseInt(d) === day;
-              } else if (weekdayMap[d] !== undefined) {
-                return weekdayMap[d] === dayOfWeek;
-              }
-              return false;
-            });
-            
-            if (shouldAdd && !isWorkDay(dateString)) {
-              workDaysToAdd.push({
-                id: `${Date.now()}-${day}`,
-                date: dateString,
-                hours,
-                hourlyRate,
-                notes
-              });
-            }
-          }
-        }
+        const created = await incomeService.createContract(contractData);
+        setContracts([...contracts, created]);
         
-        if (workDaysToAdd.length > 0) {
-          // Add all work days to database
-          for (const workDay of workDaysToAdd) {
-            await incomeService.createWorkDay(workDay);
-          }
-          
-          // Reload monthly data
-          const data = await incomeService.getMonthlyData(selectedMonth + 1, selectedYear);
-          setMonthlyData(data);
-          
-          const totalEarnings = workDaysToAdd.reduce((sum, day) => sum + incomeService.calculateEarnings(day.hours, day.hourlyRate), 0);
-          const earnings = convertCurrency(totalEarnings);
-          return `Added ${workDaysToAdd.length} work days with total earnings of €${totalEarnings} (${earnings.ron.toFixed(2)} RON, $${earnings.usd.toFixed(2)} USD). Days: ${workDaysToAdd.map(d => d.date.split('-')[2]).join(', ')}`;
-        } else {
-          return "No work days were added. The specified days might already be work days or invalid.";
-        }
+        return `Created contract "${name}" with hourly rate €${hourlyRate}/hour. Contract ID: ${created.id}`;
       } catch (error) {
-        return `Failed to add work days: ${error instanceof Error ? error.message : 'Unknown error'}`;
+        return `Failed to create contract: ${error instanceof Error ? error.message : 'Unknown error'}`;
       }
-    },
-  });
-
-  useCopilotAction({
-    name: "showFreeDays",
-    description: "Show all available free days in the current month that can be used for work",
-    parameters: [],
-    handler: async () => {
-      const freeDays = getFreeDaysInMonth;
-      if (freeDays.length === 0) {
-        return `No free days available in ${monthNames[selectedMonth]} ${selectedYear} - all days are already work days!`;
-      }
-      
-      const weekdays = freeDays.filter(d => {
-        const dayOfWeek = new Date(selectedYear, selectedMonth, d.day - 1).getDay();
-        return dayOfWeek >= 1 && dayOfWeek <= 5; // Monday=1 to Friday=5
-      });
-      
-      const weekends = freeDays.filter(d => {
-        const dayOfWeek = new Date(selectedYear, selectedMonth, d.day - 1).getDay();
-        return dayOfWeek === 0 || dayOfWeek === 6; // Sunday=0, Saturday=6
-      });
-      
-      return `Free days in ${monthNames[selectedMonth]} ${selectedYear}:
-      
-Weekdays (${weekdays.length}): ${weekdays.map(d => `${d.day} (${d.dayName})`).join(', ')}
-Weekends (${weekends.length}): ${weekends.map(d => `${d.day} (${d.dayName})`).join(', ')}
-
-Total free days: ${freeDays.length}
-Potential earnings if all weekdays worked: €${weekdays.length * 8 * 37} (${(weekdays.length * 8 * 37 * exchangeRates.EUR_TO_RON).toFixed(2)} RON, $${(weekdays.length * 8 * 37 * exchangeRates.EUR_TO_USD).toFixed(2)} USD)`;
     },
   });
 
@@ -520,30 +409,35 @@ Potential earnings if all weekdays worked: €${weekdays.length * 8 * 37} (${(we
     <div className="p-6 space-y-6">
       <div className="flex flex-col md:flex-row md:items-center justify-between mb-6 gap-4">
         <div>
-          <h1 className="text-3xl md:text-4xl font-black uppercase tracking-wide mb-2">Income Tracking</h1>
-          <p className="text-gray-600 font-bold">Track your work days and calculate monthly income</p>
+          <h1 className="text-3xl md:text-4xl font-black uppercase tracking-wide mb-2">Modern Income Tracking</h1>
+          <p className="text-gray-600 font-bold">Track work with multiple contracts and calculate monthly income</p>
         </div>
-        <select
-          value={`${selectedYear}-${selectedMonth}`}
-          onChange={(e) => {
-            const [year, month] = e.target.value.split('-');
-            const newYear = parseInt(year);
-            const newMonth = parseInt(month);
-            setSelectedYear(newYear);
-            setSelectedMonth(newMonth);
-            updateURL(newMonth, newYear);
-          }}
-        >
-          {Array.from({ length: 24 }, (_, i) => {
-            const date = new Date();
-            date.setMonth(date.getMonth() - 12 + i);
-            return (
-              <option key={i} value={`${date.getFullYear()}-${date.getMonth()}`}>
-                {monthNames[date.getMonth()]} {date.getFullYear()}
-              </option>
-            );
-          })}
-        </select>
+        <div className="flex gap-2">
+          <Button onClick={() => setIsContractDialogOpen(true)}>
+            Manage Contracts
+          </Button>
+          <select
+            value={`${selectedYear}-${selectedMonth}`}
+            onChange={(e) => {
+              const [year, month] = e.target.value.split('-');
+              const newYear = parseInt(year);
+              const newMonth = parseInt(month);
+              setSelectedYear(newYear);
+              setSelectedMonth(newMonth);
+              updateURL(newMonth, newYear);
+            }}
+          >
+            {Array.from({ length: 24 }, (_, i) => {
+              const date = new Date();
+              date.setMonth(date.getMonth() - 12 + i);
+              return (
+                <option key={i} value={`${date.getFullYear()}-${date.getMonth()}`}>
+                  {monthNames[date.getMonth()]} {date.getFullYear()}
+                </option>
+              );
+            })}
+          </select>
+        </div>
       </div>
 
       {/* Loading and Error States */}
@@ -556,6 +450,22 @@ Potential earnings if all weekdays worked: €${weekdays.length * 8 * 37} (${(we
           >
             ✕
           </button>
+        </div>
+      )}
+
+      {/* Contracts Overview */}
+      {contracts.length > 0 && (
+        <div className="bg-blue-50 border-[3px] border-black p-4" style={{ boxShadow: '4px 4px 0px #000000' }}>
+          <h3 className="font-black mb-2">Active Contracts</h3>
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-2">
+            {contracts.map(contract => (
+              <div key={contract.id} className="bg-white border-[2px] border-black p-2 text-sm">
+                <div className="font-bold">{contract.name}</div>
+                <div>€{contract.hourlyRate}/hour</div>
+                {contract.description && <div className="text-gray-600 text-xs">{contract.description}</div>}
+              </div>
+            ))}
+          </div>
         </div>
       )}
 
@@ -579,7 +489,7 @@ Potential earnings if all weekdays worked: €${weekdays.length * 8 * 37} (${(we
           value={incomeService.isLoading ? "Loading..." : currentMonthData.totalHours}
           subValues={incomeService.isLoading ? [] : [
             { value: currentMonthData.workDaysCount, label: "Days Worked" },
-            { value: getFreeDaysInMonth.length, label: "Free work days" }
+            { value: getFreeDaysInMonth.length, label: "Free days" }
           ]}
           subtitle="hours worked this month"
           color="blue"
@@ -599,7 +509,7 @@ Potential earnings if all weekdays worked: €${weekdays.length * 8 * 37} (${(we
         />
       </div>
 
-      {/* Calendar - Brutalist Style */}
+      {/* Calendar */}
       <div 
         className="bg-white border-[5px] border-black p-6 relative text-black"
         style={{ boxShadow: '6px 6px 0px #000000' }}
@@ -614,9 +524,7 @@ Potential earnings if all weekdays worked: €${weekdays.length * 8 * 37} (${(we
         </div>
         <div className="mt-4">
           <p className="text-sm font-bold mb-4 uppercase tracking-wide">
-            Click on any day to add or edit work hours. Green days indicate work days.
-            Hover over free days to see the quick add button (⚡) for 8h at €37/hour.
-            Hover over work days to see the quick delete button (🗑️).
+            Click on any day to add or edit work entries. Green days show total earnings and number of entries.
           </p>
           
           {/* Calendar Header */}
@@ -642,84 +550,186 @@ Potential earnings if all weekdays worked: €${weekdays.length * 8 * 37} (${(we
         </div>
       </div>
 
-      {/* Work Day Dialog */}
+      {/* Work Day Entry Dialog */}
       <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
-        <DialogContent>
+        <DialogContent className="max-w-2xl">
           <DialogHeader>
             <DialogTitle>
-              {editingDay && isWorkDay(editingDay.date) ? 'Edit Work Day' : 'Add Work Day'}
+              Work Entries for {selectedDate}
             </DialogTitle>
             <DialogDescription>
-              {editingDay && `Set work details for ${editingDay.date}`}
+              Add or edit work day entries for different contracts
             </DialogDescription>
           </DialogHeader>
-          {editingDay && (
-            <div className="space-y-4">
-              <div>
-                <Label htmlFor="hours">Hours Worked</Label>
-                <Input
-                  id="hours"
-                  type="number"
-                  step="0.5"
-                  value={editingDay.hours}
-                  onChange={(e) => setEditingDay({
-                    ...editingDay,
-                    hours: parseFloat(e.target.value) || 0
-                  })}
-                />
-              </div>
-              <div>
-                <Label htmlFor="rate">Hourly Rate (€)</Label>
-                <Input
-                  id="rate"
-                  type="number"
-                  step="0.01"
-                  value={editingDay.hourlyRate}
-                  onChange={(e) => setEditingDay({
-                    ...editingDay,
-                    hourlyRate: parseFloat(e.target.value) || 0
-                  })}
-                />
-              </div>
-              <div>
-                <Label htmlFor="notes">Notes (Optional)</Label>
-                <Input
-                  id="notes"
-                  value={editingDay.notes || ''}
-                  onChange={(e) => setEditingDay({
-                    ...editingDay,
-                    notes: e.target.value
-                  })}
-                  placeholder="Project details, client, etc."
-                />
-              </div>
-              <div className="p-4 bg-gray-50 rounded-md">
-                <p className="text-sm font-medium">
-                  Daily Earnings: €{(editingDay.hours * editingDay.hourlyRate).toFixed(2)}
-                </p>
-              </div>
-              <div className="flex justify-between">
-                <div className="space-x-2">
-                  {isWorkDay(editingDay.date) && (
-                    <Button
-                      variant="danger"
-                      onClick={() => handleDeleteWorkDay(editingDay.id)}
+          
+          <div className="space-y-4">
+            {editingEntries.map((entry, index) => (
+              <div key={entry.id} className="border-[2px] border-black p-4 space-y-3">
+                <div className="flex justify-between items-center">
+                  <h4 className="font-bold">Entry {index + 1}</h4>
+                  <Button 
+                    variant="danger" 
+                    size="sm"
+                    onClick={() => handleDeleteEntry(entry.id)}
+                  >
+                    Delete
+                  </Button>
+                </div>
+                
+                <div className="grid grid-cols-2 gap-4">
+                  <div>
+                    <Label htmlFor={`contract-${index}`}>Contract</Label>
+                    <select
+                      id={`contract-${index}`}
+                      value={entry.contractId}
+                      onChange={(e) => handleUpdateEntry(index, { contractId: e.target.value })}
+                      className="w-full p-2 border border-gray-300 rounded"
                     >
-                      Delete
-                    </Button>
-                  )}
+                      {contracts.map(contract => (
+                        <option key={contract.id} value={contract.id}>
+                          {contract.name} (€{contract.hourlyRate}/h)
+                        </option>
+                      ))}
+                    </select>
+                  </div>
+                  
+                  <div>
+                    <Label htmlFor={`hours-${index}`}>Hours</Label>
+                    <Input
+                      id={`hours-${index}`}
+                      type="number"
+                      step="0.5"
+                      value={entry.hours}
+                      onChange={(e) => handleUpdateEntry(index, { hours: parseFloat(e.target.value) || 0 })}
+                    />
+                  </div>
                 </div>
-                <div className="space-x-2">
-                  <Button variant="secondary" onClick={() => setIsDialogOpen(false)}>
-                    Cancel
-                  </Button>
-                  <Button onClick={() => handleSaveWorkDay(editingDay)}>
-                    Save
-                  </Button>
+                
+                <div>
+                  <Label htmlFor={`notes-${index}`}>Notes</Label>
+                  <Input
+                    id={`notes-${index}`}
+                    value={entry.notes || ''}
+                    onChange={(e) => handleUpdateEntry(index, { notes: e.target.value })}
+                    placeholder="Project details, tasks, etc."
+                  />
                 </div>
+                
+                <div className="p-2 bg-gray-50 rounded text-sm">
+                  {(() => {
+                    const contract = contracts.find(c => c.id === entry.contractId);
+                    const earnings = contract ? entry.hours * contract.hourlyRate : 0;
+                    return `Earnings: €${earnings.toFixed(2)}`;
+                  })()}
+                </div>
+              </div>
+            ))}
+            
+            {contracts.length > 0 && (
+              <Button onClick={handleAddEntry} className="w-full">
+                Add Entry
+              </Button>
+            )}
+            
+            {contracts.length === 0 && (
+              <div className="text-center p-4 bg-yellow-50 border border-yellow-300 rounded">
+                <p>You need to create at least one contract before adding work entries.</p>
+                <Button onClick={() => setIsContractDialogOpen(true)} className="mt-2">
+                  Create Contract
+                </Button>
+              </div>
+            )}
+            
+            <div className="flex justify-end space-x-2">
+              <Button variant="secondary" onClick={() => setIsDialogOpen(false)}>
+                Cancel
+              </Button>
+              <Button onClick={handleSaveEntries}>
+                Save Entries
+              </Button>
+            </div>
+          </div>
+        </DialogContent>
+      </Dialog>
+
+      {/* Contract Management Dialog */}
+      <Dialog open={isContractDialogOpen} onOpenChange={setIsContractDialogOpen}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Manage Contracts</DialogTitle>
+            <DialogDescription>
+              Create and manage your contracts
+            </DialogDescription>
+          </DialogHeader>
+          
+          <div className="space-y-4">
+            <div className="border-[2px] border-black p-4">
+              <h4 className="font-bold mb-3">Create New Contract</h4>
+              <div className="space-y-3">
+                <div>
+                  <Label htmlFor="contract-name">Contract Name</Label>
+                  <Input
+                    id="contract-name"
+                    value={newContract.name}
+                    onChange={(e) => setNewContract({ ...newContract, name: e.target.value })}
+                    placeholder="Client name or project"
+                  />
+                </div>
+                
+                <div>
+                  <Label htmlFor="hourly-rate">Hourly Rate (€)</Label>
+                  <Input
+                    id="hourly-rate"
+                    type="number"
+                    step="0.01"
+                    value={newContract.hourlyRate}
+                    onChange={(e) => setNewContract({ ...newContract, hourlyRate: parseFloat(e.target.value) || 0 })}
+                  />
+                </div>
+                
+                <div>
+                  <Label htmlFor="description">Description (Optional)</Label>
+                  <Input
+                    id="description"
+                    value={newContract.description}
+                    onChange={(e) => setNewContract({ ...newContract, description: e.target.value })}
+                    placeholder="Contract details, scope, etc."
+                  />
+                </div>
+                
+                <Button 
+                  onClick={handleCreateContract}
+                  disabled={!newContract.name.trim() || newContract.hourlyRate <= 0}
+                  className="w-full"
+                >
+                  Create Contract
+                </Button>
               </div>
             </div>
-          )}
+            
+            {contracts.length > 0 && (
+              <div>
+                <h4 className="font-bold mb-3">Existing Contracts</h4>
+                <div className="space-y-2">
+                  {contracts.map(contract => (
+                    <div key={contract.id} className="flex justify-between items-center p-2 border border-gray-300 rounded">
+                      <div>
+                        <div className="font-medium">{contract.name}</div>
+                        <div className="text-sm text-gray-600">€{contract.hourlyRate}/hour</div>
+                        {contract.description && <div className="text-xs text-gray-500">{contract.description}</div>}
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
+            
+            <div className="flex justify-end">
+              <Button variant="secondary" onClick={() => setIsContractDialogOpen(false)}>
+                Close
+              </Button>
+            </div>
+          </div>
         </DialogContent>
       </Dialog>
     </div>

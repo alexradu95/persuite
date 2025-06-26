@@ -15,7 +15,8 @@
       "Bash(npm run:*)",
       "Bash(npm test:*)",
       "Bash(npx tsc:*)",
-      "Bash(mkdir:*)"
+      "Bash(mkdir:*)",
+      "Bash(npx vitest run:*)"
     ],
     "deny": []
   }

@@ -3,16 +3,23 @@ import {
   WorkDaySchema,
   CreateWorkDaySchema,
   UpdateWorkDaySchema,
+  ContractSchema,
+  CreateContractSchema,
+  UpdateContractSchema,
+  WorkDayEntrySchema,
+  CreateWorkDayEntrySchema,
   calculateDailyEarnings,
   workDayRowToDomain,
+  contractRowToDomain,
   WorkDayRow,
+  ContractRow,
 } from './types';
 
 // Test factory for creating mock work day data
 const getMockCreateWorkDay = (overrides = {}) => {
   return {
     id: '1',
-    date: '2024-12-24',
+    date: new Date('2024-12-24'),
     hours: 8,
     hourlyRate: 37,
     notes: 'Test work day',
@@ -33,6 +40,39 @@ const getMockWorkDayRow = (overrides = {}): WorkDayRow => {
   };
 };
 
+const getMockContract = (overrides = {}) => {
+  return {
+    id: 'contract-1',
+    name: 'Web Development Project',
+    hourlyRate: 45,
+    description: 'Frontend development for client portal',
+    ...overrides,
+  };
+};
+
+const getMockContractRow = (overrides = {}): ContractRow => {
+  return {
+    id: 'contract-1',
+    name: 'Web Development Project',
+    hourly_rate: 45,
+    description: 'Frontend development for client portal',
+    created_at: '2024-12-24T10:00:00Z',
+    updated_at: '2024-12-24T10:00:00Z',
+    ...overrides,
+  };
+};
+
+const getMockWorkDayEntry = (overrides = {}) => {
+  return {
+    id: 'entry-1',
+    date: new Date('2024-12-24'),
+    contractId: 'contract-1',
+    hours: 4,
+    notes: 'Worked on user interface',
+    ...overrides,
+  };
+};
+
 describe('WorkDay Types and Schemas', () => {
   describe('WorkDaySchema', () => {
     it('should accept valid work day data', () => {
@@ -46,13 +86,13 @@ describe('WorkDay Types and Schemas', () => {
       
       const result = WorkDaySchema.parse(validWorkDay);
       expect(result.id).toBe('1');
-      expect(result.date).toBe('2024-12-24');
+      expect(result.date).toEqual(new Date('2024-12-24'));
       expect(result.hours).toBe(8);
       expect(result.hourlyRate).toBe(37);
     });
 
     it('should reject invalid date format', () => {
-      const invalidWorkDay = getMockCreateWorkDay({ date: '24-12-2024' });
+      const invalidWorkDay = getMockCreateWorkDay({ date: 'invalid-date' });
       
       expect(() => WorkDaySchema.parse(invalidWorkDay)).toThrow();
     });
@@ -104,7 +144,7 @@ describe('WorkDay Types and Schemas', () => {
       const result = CreateWorkDaySchema.parse(createData);
       
       expect(result.id).toBe('1');
-      expect(result.date).toBe('2024-12-24');
+      expect(result.date).toEqual(new Date('2024-12-24'));
       expect(result.hours).toBe(8);
       expect(result.hourlyRate).toBe(37);
       expect(result.notes).toBe('Test work day');
@@ -144,6 +184,146 @@ describe('WorkDay Types and Schemas', () => {
   });
 });
 
+describe('Contract Types and Schemas', () => {
+  describe('ContractSchema', () => {
+    it('should accept valid contract data', () => {
+      const validContract = getMockContract();
+      
+      const result = ContractSchema.parse(validContract);
+      expect(result.id).toBe('contract-1');
+      expect(result.name).toBe('Web Development Project');
+      expect(result.hourlyRate).toBe(45);
+      expect(result.description).toBe('Frontend development for client portal');
+    });
+
+    it('should reject empty contract name', () => {
+      const invalidContract = getMockContract({ name: '' });
+      
+      expect(() => ContractSchema.parse(invalidContract)).toThrow();
+    });
+
+    it('should reject negative hourly rate', () => {
+      const invalidContract = getMockContract({ hourlyRate: -1 });
+      
+      expect(() => ContractSchema.parse(invalidContract)).toThrow();
+    });
+
+    it('should reject zero hourly rate', () => {
+      const invalidContract = getMockContract({ hourlyRate: 0 });
+      
+      expect(() => ContractSchema.parse(invalidContract)).toThrow();
+    });
+
+    it('should accept contract without description', () => {
+      const contractWithoutDescription = getMockContract({ description: undefined });
+      
+      const result = ContractSchema.parse(contractWithoutDescription);
+      expect(result.description).toBeUndefined();
+    });
+  });
+
+  describe('CreateContractSchema', () => {
+    it('should omit timestamps from input data', () => {
+      const createData = getMockContract();
+      const result = CreateContractSchema.parse(createData);
+      
+      expect('createdAt' in result).toBe(false);
+      expect('updatedAt' in result).toBe(false);
+    });
+
+    it('should include all required contract fields', () => {
+      const createData = getMockContract();
+      const result = CreateContractSchema.parse(createData);
+      
+      expect(result.id).toBe('contract-1');
+      expect(result.name).toBe('Web Development Project');
+      expect(result.hourlyRate).toBe(45);
+    });
+  });
+
+  describe('UpdateContractSchema', () => {
+    it('should allow partial updates with required id', () => {
+      const partialUpdate = {
+        id: 'contract-1',
+        hourlyRate: 50,
+      };
+      
+      const result = UpdateContractSchema.parse(partialUpdate);
+      expect(result.id).toBe('contract-1');
+      expect(result.hourlyRate).toBe(50);
+      expect(result.name).toBeUndefined();
+    });
+
+    it('should require id field', () => {
+      const updateWithoutId = {
+        hourlyRate: 50,
+      };
+      
+      expect(() => UpdateContractSchema.parse(updateWithoutId)).toThrow();
+    });
+  });
+});
+
+describe('WorkDayEntry Types and Schemas', () => {
+  describe('WorkDayEntrySchema', () => {
+    it('should accept valid work day entry data', () => {
+      const validEntry = getMockWorkDayEntry();
+      
+      const result = WorkDayEntrySchema.parse(validEntry);
+      expect(result.id).toBe('entry-1');
+      expect(result.date).toEqual(new Date('2024-12-24'));
+      expect(result.contractId).toBe('contract-1');
+      expect(result.hours).toBe(4);
+      expect(result.notes).toBe('Worked on user interface');
+    });
+
+    it('should reject invalid date format', () => {
+      const invalidEntry = getMockWorkDayEntry({ date: 'invalid-date' });
+      
+      expect(() => WorkDayEntrySchema.parse(invalidEntry)).toThrow();
+    });
+
+    it('should reject negative hours', () => {
+      const invalidEntry = getMockWorkDayEntry({ hours: -1 });
+      
+      expect(() => WorkDayEntrySchema.parse(invalidEntry)).toThrow();
+    });
+
+    it('should reject zero hours', () => {
+      const invalidEntry = getMockWorkDayEntry({ hours: 0 });
+      
+      expect(() => WorkDayEntrySchema.parse(invalidEntry)).toThrow();
+    });
+
+    it('should accept entry without notes', () => {
+      const entryWithoutNotes = getMockWorkDayEntry({ notes: undefined });
+      
+      const result = WorkDayEntrySchema.parse(entryWithoutNotes);
+      expect(result.notes).toBeUndefined();
+    });
+  });
+
+  describe('CreateWorkDayEntrySchema', () => {
+    it('should omit timestamps from input data', () => {
+      const createData = getMockWorkDayEntry();
+      const result = CreateWorkDayEntrySchema.parse(createData);
+      
+      expect('createdAt' in result).toBe(false);
+      expect('updatedAt' in result).toBe(false);
+    });
+
+    it('should include all required entry fields', () => {
+      const createData = getMockWorkDayEntry();
+      const result = CreateWorkDayEntrySchema.parse(createData);
+      
+      expect(result.id).toBe('entry-1');
+      expect(result.date).toEqual(new Date('2024-12-24'));
+      expect(result.contractId).toBe('contract-1');
+      expect(result.hours).toBe(4);
+    });
+  });
+});
+
 describe('Utility Functions', () => {
   describe('calculateDailyEarnings', () => {
     it('should calculate earnings correctly for whole hours', () => {
@@ -178,12 +358,12 @@ describe('Utility Functions', () => {
       const workDay = workDayRowToDomain(row);
       
       expect(workDay.id).toBe('1');
-      expect(workDay.date).toBe('2024-12-24');
+      expect(workDay.date).toEqual(new Date('2024-12-24'));
       expect(workDay.hours).toBe(8);
       expect(workDay.hourlyRate).toBe(37);
       expect(workDay.notes).toBe('Test work day');
-      expect(workDay.createdAt).toBe('2024-12-24T10:00:00Z');
-      expect(workDay.updatedAt).toBe('2024-12-24T10:00:00Z');
+      expect(workDay.createdAt).toEqual(new Date('2024-12-24T10:00:00Z'));
+      expect(workDay.updatedAt).toEqual(new Date('2024-12-24T10:00:00Z'));
     });
 
     it('should handle null notes correctly', () => {
@@ -209,6 +389,41 @@ describe('Utility Functions', () => {
       
       expect(workDay.hours).toBe(7.5);
       expect(workDay.hourlyRate).toBe(42.33);
+    });
+  });
+
+  describe('contractRowToDomain', () => {
+    it('should convert database row to domain object correctly', () => {
+      const row = getMockContractRow();
+      const contract = contractRowToDomain(row);
+      
+      expect(contract.id).toBe('contract-1');
+      expect(contract.name).toBe('Web Development Project');
+      expect(contract.hourlyRate).toBe(45);
+      expect(contract.description).toBe('Frontend development for client portal');
+      expect(contract.createdAt).toEqual(new Date('2024-12-24T10:00:00Z'));
+      expect(contract.updatedAt).toEqual(new Date('2024-12-24T10:00:00Z'));
+    });
+
+    it('should handle null description correctly', () => {
+      const row = getMockContractRow({ description: null });
+      const contract = contractRowToDomain(row);
+      
+      expect(contract.description).toBeUndefined();
+    });
+
+    it('should handle empty string description correctly', () => {
+      const row = getMockContractRow({ description: '' });
+      const contract = contractRowToDomain(row);
+      
+      expect(contract.description).toBeUndefined();
+    });
+
+    it('should preserve hourly rate accuracy', () => {
+      const row = getMockContractRow({ hourly_rate: 42.75 });
+      const contract = contractRowToDomain(row);
+      
+      expect(contract.hourlyRate).toBe(42.75);
     });
   });
 });

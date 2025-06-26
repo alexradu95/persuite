@@ -1,3 +1,10 @@
+-- Migration script to drop existing tables and recreate with new schema
+-- This will delete all existing data
+
+-- Drop existing tables
+DROP TABLE IF EXISTS work_days;
+
+-- Create new schema from updated schema.sql
 -- Income tracking database schema for Turso SQLite
 -- This schema supports work day tracking with multiple contracts per day
 
