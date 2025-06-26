@@ -1,5 +1,5 @@
 import { WorkDay, MonthlyData, CreateWorkDay, UpdateWorkDay, calculateDailyEarnings } from '../db/types';
-import { WorkDayRepository, createWorkDayRepository } from '../repositories/work-day-repository';
+import { WorkDayRepository, createWorkDayRepository } from '@/lib/domains/work-days/repositories/work-day-repository';
 
 export type IncomeService = {
   createWorkDay: (workDay: CreateWorkDay) => Promise<WorkDay>;

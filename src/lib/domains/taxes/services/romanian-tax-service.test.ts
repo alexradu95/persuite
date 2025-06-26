@@ -1,6 +1,6 @@
 import { describe, it, expect, beforeEach, vi } from 'vitest';
 import { createRomanianTaxService, RomanianTaxService } from './romanian-tax-service';
-import { WorkDayRepository } from '../repositories/work-day-repository';
+import { WorkDayRepository } from '@/lib/domains/work-days/repositories/work-day-repository';
 import { WorkDay } from '../db/types';
 
 // Mock work day data

@@ -1,10 +1,10 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { db } from '@/lib/db/connection';
 import { createWorkDayRepository } from '@/lib/repositories/work-day-repository';
-import { createIncomeService } from '@/lib/services/income-service';
+import { createIncomeService } from '@/lib/domains/income/services/income-service';
 
 type RouteParams = {
-  params: { year: string; month: string };
+  params: { date: string };
 };
 
 export async function GET(request: NextRequest, { params }: RouteParams) {
@@ -13,24 +13,22 @@ export async function GET(request: NextRequest, { params }: RouteParams) {
       return NextResponse.json({ error: 'Database not available' }, { status: 500 });
     }
 
-    const year = parseInt(params.year);
-    const month = parseInt(params.month);
-
-    // Validate year and month
-    if (isNaN(year) || isNaN(month) || month < 1 || month > 12) {
-      return NextResponse.json({ error: 'Invalid year or month' }, { status: 400 });
+    // Validate date format (YYYY-MM-DD)
+    const dateRegex = /^\d{4}-\d{2}-\d{2}$/;
+    if (!dateRegex.test(params.date)) {
+      return NextResponse.json({ error: 'Invalid date format. Use YYYY-MM-DD' }, { status: 400 });
     }
 
     const repository = createWorkDayRepository(db);
     const service = createIncomeService(repository);
     
-    const monthlyData = await service.getMonthlyData(month, year);
+    const workDay = await service.getWorkDayByDate(params.date);
     
-    return NextResponse.json(monthlyData);
+    return NextResponse.json(workDay);
   } catch (error) {
-    console.error('Failed to get monthly data:', error);
+    console.error('Failed to get work day by date:', error);
     return NextResponse.json(
-      { error: 'Failed to get monthly data' },
+      { error: 'Failed to get work day by date' },
       { status: 500 }
     );
   }

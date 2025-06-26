@@ -1,6 +1,6 @@
 import { describe, it, expect, beforeEach } from 'vitest';
 import { createIncomeService } from './income-service';
-import { WorkDayRepository } from '../repositories/work-day-repository';
+import { WorkDayRepository } from '@/lib/domains/work-days/repositories/work-day-repository';
 import { WorkDay, CreateWorkDay, UpdateWorkDay } from '../db/types';
 
 // Mock repository implementation for testing

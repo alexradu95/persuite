@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { createRomanianTaxService } from '@/lib/services/romanian-tax-service';
+import { createRomanianTaxService } from '@/lib/domains/taxes/services/romanian-tax-service';
 import { createWorkDayRepository } from '@/lib/repositories/work-day-repository';
 import { db } from '@/lib/db/connection';
 
