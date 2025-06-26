@@ -14,7 +14,8 @@
       "Bash(pkill:*)",
       "Bash(npm run:*)",
       "Bash(npm test:*)",
-      "Bash(npx tsc:*)"
+      "Bash(npx tsc:*)",
+      "Bash(mkdir:*)"
     ],
     "deny": []
   }

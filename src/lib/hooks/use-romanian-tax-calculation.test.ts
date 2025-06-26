@@ -1,7 +1,7 @@
 import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
 import { renderHook, waitFor } from '@testing-library/react';
 import { useRomanianTaxCalculation } from './use-romanian-tax-calculation';
-import { TaxCalculationResult } from '@/lib/services/romanian-tax-service';
+import { TaxCalculationResult } from '@/lib/domains/taxes/services/romanian-tax-service';
 
 // Mock fetch globally
 const mockFetch = vi.fn();

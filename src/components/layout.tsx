@@ -19,12 +19,12 @@ export function LayoutComponent({ children }: LayoutProps) {
   });
   
   try {
-    useCopilotChatSuggestions([
-      "Add a work day for today with 8 hours at €37/hour",
-      "Show me this month's total earnings", 
-      "What's my average hourly rate?",
-      "Calculate my projected monthly income"
-    ]);
+    useCopilotChatSuggestions({
+      instructions: `Add a work day for today with 8 hours at €37/hour
+Show me this month's total earnings
+What's my average hourly rate?
+Calculate my projected monthly income`
+    });
   } catch (error) {
     console.warn('Chat suggestions failed to load:', error);
   }

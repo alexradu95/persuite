@@ -1,4 +1,4 @@
-import { WorkDay, MonthlyData, CreateWorkDay, UpdateWorkDay, calculateDailyEarnings } from '../db/types';
+import { WorkDay, MonthlyData, CreateWorkDay, UpdateWorkDay, calculateDailyEarnings } from '@/lib/db/types';
 import { WorkDayRepository, createWorkDayRepository } from '@/lib/domains/work-days/repositories/work-day-repository';
 
 export type IncomeService = {

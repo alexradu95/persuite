@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useCallback, useMemo } from 'react';
-import { WorkDay, CreateWorkDay, UpdateWorkDay, MonthlyData, calculateDailyEarnings } from '../db/types';
+import { WorkDay, CreateWorkDay, UpdateWorkDay, MonthlyData, calculateDailyEarnings } from '@/lib/db/types';
 
 // Client-side service that uses API endpoints
 export const useIncomeService = () => {
@@ -35,7 +35,7 @@ export const useIncomeService = () => {
 
   const createWorkDay = useCallback(async (workDay: CreateWorkDay): Promise<WorkDay> => {
     return handleApiCall<WorkDay>(
-      () => fetch('/api/work-days', {
+      () => fetch('/api/v1/work-days', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(workDay),
@@ -46,7 +46,7 @@ export const useIncomeService = () => {
 
   const updateWorkDay = useCallback(async (workDay: UpdateWorkDay): Promise<WorkDay> => {
     return handleApiCall<WorkDay>(
-      () => fetch(`/api/work-days/${workDay.id}`, {
+      () => fetch(`/api/v1/work-days/${workDay.id}`, {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(workDay),
@@ -57,35 +57,35 @@ export const useIncomeService = () => {
 
   const deleteWorkDay = useCallback(async (id: string): Promise<void> => {
     return handleApiCall<void>(
-      () => fetch(`/api/work-days/${id}`, { method: 'DELETE' }),
+      () => fetch(`/api/v1/work-days/${id}`, { method: 'DELETE' }),
       'Failed to delete work day'
     );
   }, [handleApiCall]);
 
   const getWorkDayById = useCallback(async (id: string): Promise<WorkDay | null> => {
     return handleApiCall<WorkDay | null>(
-      () => fetch(`/api/work-days/${id}`),
+      () => fetch(`/api/v1/work-days/${id}`),
       'Failed to get work day'
     );
   }, [handleApiCall]);
 
   const getWorkDayByDate = useCallback(async (date: string): Promise<WorkDay | null> => {
     return handleApiCall<WorkDay | null>(
-      () => fetch(`/api/work-days/by-date/${date}`),
+      () => fetch(`/api/v1/work-days/by-date/${date}`),
       'Failed to get work day by date'
     );
   }, [handleApiCall]);
 
   const getMonthlyData = useCallback(async (month: number, year: number): Promise<MonthlyData> => {
     return handleApiCall<MonthlyData>(
-      () => fetch(`/api/work-days/monthly/${year}/${month}`),
+      () => fetch(`/api/v1/work-days/monthly/${year}/${month}`),
       'Failed to get monthly data'
     );
   }, [handleApiCall]);
 
   const getWorkDaysByDateRange = useCallback(async (startDate: string, endDate: string): Promise<WorkDay[]> => {
     return handleApiCall<WorkDay[]>(
-      () => fetch(`/api/work-days/range?start=${startDate}&end=${endDate}`),
+      () => fetch(`/api/v1/work-days/range?start=${startDate}&end=${endDate}`),
       'Failed to get work days by date range'
     );
   }, [handleApiCall]);

@@ -1,7 +1,7 @@
 import { describe, it, expect, beforeEach, vi } from 'vitest';
 import { createRomanianTaxService, RomanianTaxService } from './romanian-tax-service';
 import { WorkDayRepository } from '@/lib/domains/work-days/repositories/work-day-repository';
-import { WorkDay } from '../db/types';
+import { WorkDay } from '@/lib/db/types';
 
 // Mock work day data
 const getMockWorkDay = (overrides?: Partial<WorkDay>): WorkDay => {

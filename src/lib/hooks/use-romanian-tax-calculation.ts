@@ -1,5 +1,5 @@
 import { useState, useEffect, useCallback } from 'react';
-import { TaxCalculationResult } from '@/lib/services/romanian-tax-service';
+import { TaxCalculationResult } from '@/lib/domains/taxes/services/romanian-tax-service';
 
 type UseRomanianTaxCalculationResult = {
   taxData: TaxCalculationResult | null;

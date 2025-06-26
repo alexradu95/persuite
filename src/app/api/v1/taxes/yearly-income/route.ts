@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { createRomanianTaxService } from '@/lib/domains/taxes/services/romanian-tax-service';
-import { createWorkDayRepository } from '@/lib/repositories/work-day-repository';
+import { createWorkDayRepository } from '@/lib/domains/work-days/repositories/work-day-repository';
 import { db } from '@/lib/db/connection';
 
 // GET /api/romanian-taxes/yearly-income?year=2024 - Get total gross income for the year

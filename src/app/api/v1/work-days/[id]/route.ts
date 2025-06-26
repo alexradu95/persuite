@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { db } from '@/lib/db/connection';
-import { createWorkDayRepository } from '@/lib/repositories/work-day-repository';
+import { createWorkDayRepository } from '@/lib/domains/work-days/repositories/work-day-repository';
 import { createIncomeService } from '@/lib/domains/income/services/income-service';
 import { UpdateWorkDaySchema } from '@/lib/db/types';
 

@@ -1,7 +1,7 @@
 import { describe, it, expect, beforeEach } from 'vitest';
 import { createIncomeService } from './income-service';
 import { WorkDayRepository } from '@/lib/domains/work-days/repositories/work-day-repository';
-import { WorkDay, CreateWorkDay, UpdateWorkDay } from '../db/types';
+import { WorkDay, CreateWorkDay, UpdateWorkDay } from '@/lib/db/types';
 
 // Mock repository implementation for testing
 const createMockWorkDayRepository = (): WorkDayRepository => {
@@ -238,7 +238,7 @@ describe('Income Service', () => {
     });
 
     it('should calculate monthly statistics correctly', async () => {
-      const monthlyData = await service.getMonthlyData('12', 2024);
+      const monthlyData = await service.getMonthlyData(12, 2024);
       
       expect(monthlyData.month).toBe('December');
       expect(monthlyData.year).toBe(2024);
@@ -249,7 +249,7 @@ describe('Income Service', () => {
     });
 
     it('should return empty data for month with no work days', async () => {
-      const monthlyData = await service.getMonthlyData('1', 2024);
+      const monthlyData = await service.getMonthlyData(1, 2024);
       
       expect(monthlyData.month).toBe('January');
       expect(monthlyData.year).toBe(2024);
@@ -260,7 +260,7 @@ describe('Income Service', () => {
     });
 
     it('should include work days in monthly data', async () => {
-      const monthlyData = await service.getMonthlyData('12', 2024);
+      const monthlyData = await service.getMonthlyData(12, 2024);
       
       expect(monthlyData.workDays).toHaveLength(3);
       expect(monthlyData.workDays[0].date).toBe('2024-12-01');

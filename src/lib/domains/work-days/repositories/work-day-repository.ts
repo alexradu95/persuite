@@ -1,4 +1,4 @@
-import { db, DatabaseClient } from '../db/connection';
+import { db, DatabaseClient } from '@/lib/db/connection';
 import {
   WorkDay,
   CreateWorkDay,
@@ -9,7 +9,7 @@ import {
   CreateWorkDaySchema,
   UpdateWorkDaySchema,
   WorkDayQuerySchema,
-} from '../db/types';
+} from '@/lib/db/types';
 
 export type WorkDayRepository = {
   create: (workDay: CreateWorkDay) => Promise<WorkDay>;
@@ -50,7 +50,7 @@ export const createWorkDayRepository = (client?: DatabaseClient | null): WorkDay
         throw new Error('Failed to create work day');
       }
 
-      return workDayRowToDomain(result.rows[0] as WorkDayRow);
+      return workDayRowToDomain(result.rows[0] as unknown as WorkDayRow);
     },
 
     findById: async (id: string): Promise<WorkDay | null> => {
@@ -63,7 +63,7 @@ export const createWorkDayRepository = (client?: DatabaseClient | null): WorkDay
         return null;
       }
 
-      return workDayRowToDomain(result.rows[0] as WorkDayRow);
+      return workDayRowToDomain(result.rows[0] as unknown as WorkDayRow);
     },
 
     findByDate: async (date: string): Promise<WorkDay | null> => {
@@ -76,14 +76,14 @@ export const createWorkDayRepository = (client?: DatabaseClient | null): WorkDay
         return null;
       }
 
-      return workDayRowToDomain(result.rows[0] as WorkDayRow);
+      return workDayRowToDomain(result.rows[0] as unknown as WorkDayRow);
     },
 
     findMany: async (query: WorkDayQuery = {}): Promise<WorkDay[]> => {
       const validatedQuery = WorkDayQuerySchema.parse(query);
       
       let sql = 'SELECT * FROM work_days WHERE 1=1';
-      const args: unknown[] = [];
+      const args: (string | number)[] = [];
 
       if (validatedQuery.startDate) {
         sql += ' AND date >= ?';
@@ -118,7 +118,7 @@ export const createWorkDayRepository = (client?: DatabaseClient | null): WorkDay
       }
 
       const result = await client.execute({ sql, args });
-      return result.rows.map(row => workDayRowToDomain(row as WorkDayRow));
+      return result.rows.map(row => workDayRowToDomain(row as unknown as WorkDayRow));
     },
 
     update: async (workDayData: UpdateWorkDay): Promise<WorkDay> => {
@@ -134,7 +134,7 @@ export const createWorkDayRepository = (client?: DatabaseClient | null): WorkDay
         throw new Error(`Work day with id ${validatedData.id} not found`);
       }
 
-      const existingWorkDay = workDayRowToDomain(existing.rows[0] as WorkDayRow);
+      const existingWorkDay = workDayRowToDomain(existing.rows[0] as unknown as WorkDayRow);
       
       // Merge existing data with updates
       const updatedData = {
@@ -162,7 +162,7 @@ export const createWorkDayRepository = (client?: DatabaseClient | null): WorkDay
         throw new Error('Failed to update work day');
       }
 
-      return workDayRowToDomain(result.rows[0] as WorkDayRow);
+      return workDayRowToDomain(result.rows[0] as unknown as WorkDayRow);
     },
 
     deleteById: async (id: string): Promise<void> => {
@@ -182,7 +182,7 @@ export const createWorkDayRepository = (client?: DatabaseClient | null): WorkDay
         args: [month],
       });
 
-      return result.rows.map(row => workDayRowToDomain(row as WorkDayRow));
+      return result.rows.map(row => workDayRowToDomain(row as unknown as WorkDayRow));
     },
 
     findByDateRange: async (startDate: string, endDate: string): Promise<WorkDay[]> => {
@@ -191,7 +191,7 @@ export const createWorkDayRepository = (client?: DatabaseClient | null): WorkDay
         args: [startDate, endDate],
       });
 
-      return result.rows.map(row => workDayRowToDomain(row as WorkDayRow));
+      return result.rows.map(row => workDayRowToDomain(row as unknown as WorkDayRow));
     },
   };
 };

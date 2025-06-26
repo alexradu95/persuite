@@ -94,8 +94,9 @@ describe('WorkDay Types and Schemas', () => {
       const createData = getMockCreateWorkDay();
       const result = CreateWorkDaySchema.parse(createData);
       
-      expect(result.createdAt).toBeUndefined();
-      expect(result.updatedAt).toBeUndefined();
+      // CreateWorkDaySchema omits createdAt and updatedAt, so they won't be present
+      expect('createdAt' in result).toBe(false);
+      expect('updatedAt' in result).toBe(false);
     });
 
     it('should include all required work day fields', () => {

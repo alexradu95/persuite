@@ -1,6 +1,7 @@
 import { z } from 'zod';
 import { WorkDayRepository } from '@/lib/domains/work-days/repositories/work-day-repository';
-import { calculateDailyEarnings } from '../db/types';
+import { calculateDailyEarnings } from '@/lib/db/types';
+import { TAX_CONSTANTS_2024 } from '../../config/tax-rules';
 
 // Romanian tax calculation schemas
 export const RomanianTaxCalculationSchema = z.object({
