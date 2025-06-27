@@ -10,8 +10,8 @@
     "test": "vitest run",
     "test:watch": "vitest",
     "test:ui": "vitest --ui",
-    "migrate": "node-pg-migrate up",
-    "migrate:down": "node-pg-migrate down",
+    "migrate": "dotenv -e .env.development.local node-pg-migrate up",
+    "migrate:down": "dotenv -e .env.development.local node-pg-migrate down",
     "migrate:status": "node-pg-migrate status",
     "migrate:create": "node-pg-migrate create"
   },

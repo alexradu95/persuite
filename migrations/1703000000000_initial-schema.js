@@ -2,7 +2,7 @@
 
 /**
  * Initial database schema migration
- * Creates contracts, work_day_entries, and work_days tables
+ * Creates contracts and work_day_entries tables
  */
 
 exports.up = pgm => {
@@ -73,41 +73,6 @@ exports.up = pgm => {
     },
   });
 
-  // Create work_days table (legacy)
-  pgm.createTable('work_days', {
-    id: {
-      type: 'text',
-      primaryKey: true,
-    },
-    date: {
-      type: 'date',
-      notNull: true,
-      unique: true,
-    },
-    hours: {
-      type: 'decimal(5,2)',
-      notNull: true,
-      check: 'hours >= 0',
-    },
-    hourly_rate: {
-      type: 'decimal(10,2)',
-      notNull: true,
-      check: 'hourly_rate >= 0',
-    },
-    notes: {
-      type: 'text',
-    },
-    created_at: {
-      type: 'timestamptz',
-      notNull: true,
-      default: pgm.func('now()'),
-    },
-    updated_at: {
-      type: 'timestamptz',
-      notNull: true,
-      default: pgm.func('now()'),
-    },
-  });
 
   // Create indexes for contracts table
   pgm.createIndex('contracts', 'name');
@@ -121,12 +86,6 @@ exports.up = pgm => {
     where: 'date IS NOT NULL',
   });
 
-  // Create indexes for work_days table (legacy)
-  pgm.createIndex('work_days', 'date');
-  pgm.createIndex('work_days', ['date'], {
-    name: 'idx_work_days_month',
-    where: 'date IS NOT NULL',
-  });
 
   // Create triggers to update the updated_at timestamp
   pgm.sql(`
@@ -153,17 +112,10 @@ exports.up = pgm => {
     level: 'ROW',
   });
 
-  pgm.createTrigger('work_days', 'update_work_days_updated_at', {
-    when: 'BEFORE',
-    operation: 'UPDATE',
-    function: 'update_updated_at_column',
-    level: 'ROW',
-  });
 };
 
 exports.down = pgm => {
   // Drop triggers
-  pgm.dropTrigger('work_days', 'update_work_days_updated_at');
   pgm.dropTrigger('work_day_entries', 'update_work_day_entries_updated_at');
   pgm.dropTrigger('contracts', 'update_contracts_updated_at');
   
@@ -172,6 +124,5 @@ exports.down = pgm => {
   
   // Drop tables in reverse order (to handle foreign keys)
   pgm.dropTable('work_day_entries');
-  pgm.dropTable('work_days');
   pgm.dropTable('contracts');
 };
