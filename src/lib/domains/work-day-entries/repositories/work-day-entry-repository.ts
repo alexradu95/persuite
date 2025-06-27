@@ -28,9 +28,8 @@ export type WorkDayEntryRepository = {
   deleteById: (id: string) => Promise<void>;
 };
 
-// Helper function to format date for database
 const formatDateForDb = (date: Date): string => {
-  return date.toISOString().split('T')[0]; // YYYY-MM-DD format
+  return date.toISOString().split('T')[0];
 };
 
 export const createWorkDayEntryRepository = (client?: DatabaseClient | null): WorkDayEntryRepository => {
@@ -40,93 +39,87 @@ export const createWorkDayEntryRepository = (client?: DatabaseClient | null): Wo
   
   const repository: WorkDayEntryRepository = {
     create: async (entryData: CreateWorkDayEntry): Promise<WorkDayEntry> => {
-      // Validate input data
       const validatedData = CreateWorkDayEntrySchema.parse(entryData);
       
-      const result = await client.execute({
-        sql: `
-          INSERT INTO work_day_entries (id, date, contract_id, hours, notes)
-          VALUES (?, ?, ?, ?, ?)
-          RETURNING *
-        `,
-        args: [
-          validatedData.id,
-          formatDateForDb(validatedData.date),
-          validatedData.contractId,
-          validatedData.hours,
-          validatedData.notes || null,
-        ],
-      });
+      const rows = await client.query<WorkDayEntryRow>(
+        `INSERT INTO work_day_entries (id, date, contract_id, hours, notes)
+         VALUES ($1, $2, $3, $4, $5)
+         RETURNING *`,
+        {
+          params: [
+            validatedData.id,
+            formatDateForDb(validatedData.date),
+            validatedData.contractId,
+            validatedData.hours,
+            validatedData.notes || null,
+          ],
+        }
+      );
 
-      if (result.rows.length === 0) {
+      if (rows.length === 0) {
         throw new Error('Failed to create work day entry');
       }
 
-      const row = result.rows[0] as unknown as WorkDayEntryRow;
-      return workDayEntryRowToDomain(row);
+      return workDayEntryRowToDomain(rows[0]);
     },
 
     findById: async (id: string): Promise<WorkDayEntry | null> => {
-      const result = await client.execute({
-        sql: 'SELECT * FROM work_day_entries WHERE id = ?',
-        args: [id],
-      });
+      const row = await client.queryOne<WorkDayEntryRow>(
+        'SELECT * FROM work_day_entries WHERE id = $1',
+        { params: [id] }
+      );
 
-      if (result.rows.length === 0) {
-        return null;
-      }
-
-      const row = result.rows[0] as unknown as WorkDayEntryRow;
-      return workDayEntryRowToDomain(row);
+      return row ? workDayEntryRowToDomain(row) : null;
     },
 
     findByDate: async (date: Date): Promise<WorkDayEntry[]> => {
-      const result = await client.execute({
-        sql: 'SELECT * FROM work_day_entries WHERE date = ? ORDER BY created_at ASC',
-        args: [formatDateForDb(date)],
-      });
+      const rows = await client.query<WorkDayEntryRow>(
+        'SELECT * FROM work_day_entries WHERE date = $1 ORDER BY created_at ASC',
+        { params: [formatDateForDb(date)] }
+      );
 
-      return result.rows.map((row) => workDayEntryRowToDomain(row as unknown as WorkDayEntryRow));
+      return rows.map(workDayEntryRowToDomain);
     },
 
     findByContract: async (contractId: string): Promise<WorkDayEntry[]> => {
-      const result = await client.execute({
-        sql: 'SELECT * FROM work_day_entries WHERE contract_id = ? ORDER BY date DESC',
-        args: [contractId],
-      });
+      const rows = await client.query<WorkDayEntryRow>(
+        'SELECT * FROM work_day_entries WHERE contract_id = $1 ORDER BY date DESC',
+        { params: [contractId] }
+      );
 
-      return result.rows.map((row) => workDayEntryRowToDomain(row as unknown as WorkDayEntryRow));
+      return rows.map(workDayEntryRowToDomain);
     },
 
     findByDateRange: async (startDate: Date, endDate: Date): Promise<WorkDayEntry[]> => {
-      const result = await client.execute({
-        sql: 'SELECT * FROM work_day_entries WHERE date >= ? AND date <= ? ORDER BY date ASC',
-        args: [formatDateForDb(startDate), formatDateForDb(endDate)],
-      });
+      const rows = await client.query<WorkDayEntryRow>(
+        'SELECT * FROM work_day_entries WHERE date >= $1 AND date <= $2 ORDER BY date ASC',
+        { params: [formatDateForDb(startDate), formatDateForDb(endDate)] }
+      );
 
-      return result.rows.map((row) => workDayEntryRowToDomain(row as unknown as WorkDayEntryRow));
+      return rows.map(workDayEntryRowToDomain);
     },
 
     findMany: async (query: WorkDayEntryQuery = {}): Promise<WorkDayEntry[]> => {
       const { limit, offset, contractId, startDate, endDate } = query;
       
       let sql = 'SELECT * FROM work_day_entries';
-      const args: any[] = [];
+      const params: unknown[] = [];
       const conditions: string[] = [];
+      let paramIndex = 1;
 
       if (contractId) {
-        conditions.push('contract_id = ?');
-        args.push(contractId);
+        conditions.push(`contract_id = $${paramIndex++}`);
+        params.push(contractId);
       }
 
       if (startDate) {
-        conditions.push('date >= ?');
-        args.push(formatDateForDb(startDate));
+        conditions.push(`date >= $${paramIndex++}`);
+        params.push(formatDateForDb(startDate));
       }
 
       if (endDate) {
-        conditions.push('date <= ?');
-        args.push(formatDateForDb(endDate));
+        conditions.push(`date <= $${paramIndex++}`);
+        params.push(formatDateForDb(endDate));
       }
 
       if (conditions.length > 0) {
@@ -136,52 +129,47 @@ export const createWorkDayEntryRepository = (client?: DatabaseClient | null): Wo
       sql += ' ORDER BY date DESC, created_at DESC';
 
       if (limit !== undefined) {
-        sql += ' LIMIT ?';
-        args.push(limit);
+        sql += ` LIMIT $${paramIndex++}`;
+        params.push(limit);
       }
 
       if (offset !== undefined) {
-        sql += ' OFFSET ?';
-        args.push(offset);
+        sql += ` OFFSET $${paramIndex++}`;
+        params.push(offset);
       }
 
-      const result = await client.execute({
-        sql,
-        args,
-      });
-
-      return result.rows.map((row) => workDayEntryRowToDomain(row as unknown as WorkDayEntryRow));
+      const rows = await client.query<WorkDayEntryRow>(sql, { params });
+      return rows.map(workDayEntryRowToDomain);
     },
 
     update: async (entryData: UpdateWorkDayEntry): Promise<WorkDayEntry> => {
-      // Validate input data
       const validatedData = UpdateWorkDayEntrySchema.parse(entryData);
       
       const fieldsToUpdate: string[] = [];
-      const args: any[] = [];
+      const params: unknown[] = [];
+      let paramIndex = 1;
 
       if (validatedData.date !== undefined) {
-        fieldsToUpdate.push('date = ?');
-        args.push(formatDateForDb(validatedData.date));
+        fieldsToUpdate.push(`date = $${paramIndex++}`);
+        params.push(formatDateForDb(validatedData.date));
       }
 
       if (validatedData.contractId !== undefined) {
-        fieldsToUpdate.push('contract_id = ?');
-        args.push(validatedData.contractId);
+        fieldsToUpdate.push(`contract_id = $${paramIndex++}`);
+        params.push(validatedData.contractId);
       }
 
       if (validatedData.hours !== undefined) {
-        fieldsToUpdate.push('hours = ?');
-        args.push(validatedData.hours);
+        fieldsToUpdate.push(`hours = $${paramIndex++}`);
+        params.push(validatedData.hours);
       }
 
       if (validatedData.notes !== undefined) {
-        fieldsToUpdate.push('notes = ?');
-        args.push(validatedData.notes);
+        fieldsToUpdate.push(`notes = $${paramIndex++}`);
+        params.push(validatedData.notes);
       }
 
       if (fieldsToUpdate.length === 0) {
-        // No fields to update, just return the existing entry
         const existing = await repository.findById(validatedData.id);
         if (!existing) {
           throw new Error('Work day entry not found');
@@ -189,38 +177,32 @@ export const createWorkDayEntryRepository = (client?: DatabaseClient | null): Wo
         return existing;
       }
 
-      // Add the ID to the end of args array
-      args.push(validatedData.id);
+      params.push(validatedData.id);
 
-      const result = await client.execute({
-        sql: `
-          UPDATE work_day_entries 
-          SET ${fieldsToUpdate.join(', ')}
-          WHERE id = ?
-          RETURNING *
-        `,
-        args,
-      });
+      const rows = await client.query<WorkDayEntryRow>(
+        `UPDATE work_day_entries 
+         SET ${fieldsToUpdate.join(', ')}
+         WHERE id = $${paramIndex}
+         RETURNING *`,
+        { params }
+      );
 
-      if (result.rows.length === 0) {
+      if (rows.length === 0) {
         throw new Error('Failed to update work day entry');
       }
 
-      const row = result.rows[0] as unknown as WorkDayEntryRow;
-      return workDayEntryRowToDomain(row);
+      return workDayEntryRowToDomain(rows[0]);
     },
 
     deleteById: async (id: string): Promise<void> => {
-      await client.execute({
-        sql: 'DELETE FROM work_day_entries WHERE id = ?',
-        args: [id],
-      });
+      await client.execute(
+        'DELETE FROM work_day_entries WHERE id = $1',
+        { params: [id] }
+      );
     },
   };
   
   return repository;
 };
 
-// Export a default instance using the global database connection
-// Only create if we have a valid database connection
 export const workDayEntryRepository = db ? createWorkDayEntryRepository(db) : null;

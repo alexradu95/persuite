@@ -29,93 +29,82 @@ export const createContractRepository = (client?: DatabaseClient | null): Contra
   
   const repository: ContractRepository = {
     create: async (contractData: CreateContract): Promise<Contract> => {
-      // Validate input data
       const validatedData = CreateContractSchema.parse(contractData);
       
-      const result = await client.execute({
-        sql: `
-          INSERT INTO contracts (id, name, hourly_rate, description)
-          VALUES (?, ?, ?, ?)
-          RETURNING *
-        `,
-        args: [
-          validatedData.id,
-          validatedData.name,
-          validatedData.hourlyRate,
-          validatedData.description || null,
-        ],
-      });
+      const rows = await client.query<ContractRow>(
+        `INSERT INTO contracts (id, name, hourly_rate, description)
+         VALUES ($1, $2, $3, $4)
+         RETURNING *`,
+        {
+          params: [
+            validatedData.id,
+            validatedData.name,
+            validatedData.hourlyRate,
+            validatedData.description || null,
+          ],
+        }
+      );
 
-      if (result.rows.length === 0) {
+      if (rows.length === 0) {
         throw new Error('Failed to create contract');
       }
 
-      const row = result.rows[0] as unknown as ContractRow;
-      return contractRowToDomain(row);
+      return contractRowToDomain(rows[0]);
     },
 
     findById: async (id: string): Promise<Contract | null> => {
-      const result = await client.execute({
-        sql: 'SELECT * FROM contracts WHERE id = ?',
-        args: [id],
-      });
+      const row = await client.queryOne<ContractRow>(
+        'SELECT * FROM contracts WHERE id = $1',
+        { params: [id] }
+      );
 
-      if (result.rows.length === 0) {
-        return null;
-      }
-
-      const row = result.rows[0] as unknown as ContractRow;
-      return contractRowToDomain(row);
+      return row ? contractRowToDomain(row) : null;
     },
 
     findMany: async (query: ContractQuery = {}): Promise<Contract[]> => {
       const { limit, offset } = query;
       
       let sql = 'SELECT * FROM contracts ORDER BY created_at DESC';
-      const args: any[] = [];
+      const params: unknown[] = [];
+      let paramIndex = 1;
 
       if (limit !== undefined) {
-        sql += ' LIMIT ?';
-        args.push(limit);
+        sql += ` LIMIT $${paramIndex++}`;
+        params.push(limit);
       }
 
       if (offset !== undefined) {
-        sql += ' OFFSET ?';
-        args.push(offset);
+        sql += ` OFFSET $${paramIndex++}`;
+        params.push(offset);
       }
 
-      const result = await client.execute({
-        sql,
-        args,
-      });
-
-      return result.rows.map((row) => contractRowToDomain(row as unknown as ContractRow));
+      const rows = await client.query<ContractRow>(sql, { params });
+      return rows.map(contractRowToDomain);
     },
 
     update: async (contractData: UpdateContract): Promise<Contract> => {
-      // Validate input data
       const validatedData = UpdateContractSchema.parse(contractData);
       
       const fieldsToUpdate: string[] = [];
-      const args: any[] = [];
+      const params: unknown[] = [];
+      let paramIndex = 1;
 
       if (validatedData.name !== undefined) {
-        fieldsToUpdate.push('name = ?');
-        args.push(validatedData.name);
+        fieldsToUpdate.push(`name = $${paramIndex++}`);
+        params.push(validatedData.name);
       }
 
       if (validatedData.hourlyRate !== undefined) {
-        fieldsToUpdate.push('hourly_rate = ?');
-        args.push(validatedData.hourlyRate);
+        fieldsToUpdate.push(`hourly_rate = $${paramIndex++}`);
+        params.push(validatedData.hourlyRate);
       }
 
       if (validatedData.description !== undefined) {
-        fieldsToUpdate.push('description = ?');
-        args.push(validatedData.description);
+        fieldsToUpdate.push(`description = $${paramIndex++}`);
+        params.push(validatedData.description);
       }
 
       if (fieldsToUpdate.length === 0) {
-        // No fields to update, just return the existing contract
         const existing = await repository.findById(validatedData.id);
         if (!existing) {
           throw new Error('Contract not found');
@@ -123,38 +112,32 @@ export const createContractRepository = (client?: DatabaseClient | null): Contra
         return existing;
       }
 
-      // Add the ID to the end of args array
-      args.push(validatedData.id);
+      params.push(validatedData.id);
 
-      const result = await client.execute({
-        sql: `
-          UPDATE contracts 
-          SET ${fieldsToUpdate.join(', ')}
-          WHERE id = ?
-          RETURNING *
-        `,
-        args,
-      });
+      const rows = await client.query<ContractRow>(
+        `UPDATE contracts 
+         SET ${fieldsToUpdate.join(', ')}
+         WHERE id = $${paramIndex}
+         RETURNING *`,
+        { params }
+      );
 
-      if (result.rows.length === 0) {
+      if (rows.length === 0) {
         throw new Error('Failed to update contract');
       }
 
-      const row = result.rows[0] as unknown as ContractRow;
-      return contractRowToDomain(row);
+      return contractRowToDomain(rows[0]);
     },
 
     deleteById: async (id: string): Promise<void> => {
-      await client.execute({
-        sql: 'DELETE FROM contracts WHERE id = ?',
-        args: [id],
-      });
+      await client.execute(
+        'DELETE FROM contracts WHERE id = $1',
+        { params: [id] }
+      );
     },
   };
   
   return repository;
 };
 
-// Export a default instance using the global database connection
-// Only create if we have a valid database connection
 export const contractRepository = db ? createContractRepository(db) : null;

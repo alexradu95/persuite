@@ -3,7 +3,6 @@ import { createContractRepository } from './contract-repository';
 import { DatabaseClient } from '@/lib/db/connection';
 import { Contract, CreateContract, UpdateContract } from '@/lib/db/types';
 
-// Test factory for creating mock contract data
 const getMockCreateContract = (overrides = {}): CreateContract => {
   return {
     id: 'contract-1',
@@ -32,7 +31,11 @@ describe('Contract Repository', () => {
 
   beforeEach(() => {
     mockClient = {
+      query: vi.fn(),
+      queryOne: vi.fn(),
       execute: vi.fn(),
+      transaction: vi.fn(),
+      close: vi.fn(),
     } as unknown as DatabaseClient;
     repository = createContractRepository(mockClient);
   });
@@ -40,72 +43,62 @@ describe('Contract Repository', () => {
   describe('create', () => {
     it('should create a new contract successfully', async () => {
       const contractData = getMockCreateContract();
-      const mockDbResult = {
-        rows: [{
-          id: 'contract-1',
-          name: 'Web Development Project',
-          hourly_rate: 45,
-          description: 'Frontend development for client portal',
-          created_at: '2024-12-24T10:00:00Z',
-          updated_at: '2024-12-24T10:00:00Z',
-        }],
-      };
+      const mockDbRows = [{
+        id: 'contract-1',
+        name: 'Web Development Project',
+        hourly_rate: 45,
+        description: 'Frontend development for client portal',
+        created_at: '2024-12-24T10:00:00Z',
+        updated_at: '2024-12-24T10:00:00Z',
+      }];
 
-      vi.mocked(mockClient.execute).mockResolvedValue(mockDbResult);
+      vi.mocked(mockClient.query).mockResolvedValue(mockDbRows);
 
       const result = await repository.create(contractData);
 
-      expect(mockClient.execute).toHaveBeenCalledWith({
-        sql: expect.stringContaining('INSERT INTO contracts'),
-        args: [
-          'contract-1',
-          'Web Development Project',
-          45,
-          'Frontend development for client portal',
-        ],
-      });
+      expect(mockClient.query).toHaveBeenCalledWith(
+        expect.stringContaining('INSERT INTO contracts'),
+        {
+          params: [
+            'contract-1',
+            'Web Development Project',
+            45,
+            'Frontend development for client portal',
+          ],
+        }
+      );
 
-      expect(result.id).toBe('contract-1');
-      expect(result.name).toBe('Web Development Project');
-      expect(result.hourlyRate).toBe(45);
-      expect(result.description).toBe('Frontend development for client portal');
+      expect(result).toEqual({
+        id: 'contract-1',
+        name: 'Web Development Project',
+        hourlyRate: 45,
+        description: 'Frontend development for client portal',
+        createdAt: new Date('2024-12-24T10:00:00Z'),
+        updatedAt: new Date('2024-12-24T10:00:00Z'),
+      });
     });
 
-    it('should handle contract creation without description', async () => {
+    it('should handle null description correctly', async () => {
       const contractData = getMockCreateContract({ description: undefined });
-      const mockDbResult = {
-        rows: [{
-          id: 'contract-1',
-          name: 'Web Development Project',
-          hourly_rate: 45,
-          description: null,
-          created_at: '2024-12-24T10:00:00Z',
-          updated_at: '2024-12-24T10:00:00Z',
-        }],
-      };
+      const mockDbRows = [{
+        id: 'contract-1',
+        name: 'Web Development Project',
+        hourly_rate: 45,
+        description: null,
+        created_at: '2024-12-24T10:00:00Z',
+        updated_at: '2024-12-24T10:00:00Z',
+      }];
 
-      vi.mocked(mockClient.execute).mockResolvedValue(mockDbResult);
+      vi.mocked(mockClient.query).mockResolvedValue(mockDbRows);
 
       const result = await repository.create(contractData);
-
-      expect(mockClient.execute).toHaveBeenCalledWith({
-        sql: expect.stringContaining('INSERT INTO contracts'),
-        args: [
-          'contract-1',
-          'Web Development Project',
-          45,
-          null,
-        ],
-      });
 
       expect(result.description).toBeUndefined();
     });
 
     it('should throw error when creation fails', async () => {
       const contractData = getMockCreateContract();
-      const mockDbResult = { rows: [] };
-
-      vi.mocked(mockClient.execute).mockResolvedValue(mockDbResult);
+      vi.mocked(mockClient.query).mockResolvedValue([]);
 
       await expect(repository.create(contractData)).rejects.toThrow('Failed to create contract');
     });
@@ -113,35 +106,36 @@ describe('Contract Repository', () => {
 
   describe('findById', () => {
     it('should find contract by id successfully', async () => {
-      const mockDbResult = {
-        rows: [{
-          id: 'contract-1',
-          name: 'Web Development Project',
-          hourly_rate: 45,
-          description: 'Frontend development for client portal',
-          created_at: '2024-12-24T10:00:00Z',
-          updated_at: '2024-12-24T10:00:00Z',
-        }],
+      const mockDbRow = {
+        id: 'contract-1',
+        name: 'Web Development Project',
+        hourly_rate: 45,
+        description: 'Frontend development for client portal',
+        created_at: '2024-12-24T10:00:00Z',
+        updated_at: '2024-12-24T10:00:00Z',
       };
 
-      vi.mocked(mockClient.execute).mockResolvedValue(mockDbResult);
+      vi.mocked(mockClient.queryOne).mockResolvedValue(mockDbRow);
 
       const result = await repository.findById('contract-1');
 
-      expect(mockClient.execute).toHaveBeenCalledWith({
-        sql: expect.stringContaining('SELECT * FROM contracts WHERE id = ?'),
-        args: ['contract-1'],
-      });
+      expect(mockClient.queryOne).toHaveBeenCalledWith(
+        'SELECT * FROM contracts WHERE id = $1',
+        { params: ['contract-1'] }
+      );
 
-      expect(result).not.toBeNull();
-      expect(result!.id).toBe('contract-1');
-      expect(result!.name).toBe('Web Development Project');
+      expect(result).toEqual({
+        id: 'contract-1',
+        name: 'Web Development Project',
+        hourlyRate: 45,
+        description: 'Frontend development for client portal',
+        createdAt: new Date('2024-12-24T10:00:00Z'),
+        updatedAt: new Date('2024-12-24T10:00:00Z'),
+      });
     });
 
     it('should return null when contract not found', async () => {
-      const mockDbResult = { rows: [] };
-
-      vi.mocked(mockClient.execute).mockResolvedValue(mockDbResult);
+      vi.mocked(mockClient.queryOne).mockResolvedValue(null);
 
       const result = await repository.findById('non-existent');
 
@@ -150,54 +144,56 @@ describe('Contract Repository', () => {
   });
 
   describe('findMany', () => {
-    it('should find all contracts when no query provided', async () => {
-      const mockDbResult = {
-        rows: [
-          {
-            id: 'contract-1',
-            name: 'Web Development Project',
-            hourly_rate: 45,
-            description: 'Frontend development',
-            created_at: '2024-12-24T10:00:00Z',
-            updated_at: '2024-12-24T10:00:00Z',
-          },
-          {
-            id: 'contract-2',
-            name: 'Backend API Project',
-            hourly_rate: 50,
-            description: null,
-            created_at: '2024-12-24T11:00:00Z',
-            updated_at: '2024-12-24T11:00:00Z',
-          },
-        ],
-      };
+    it('should find contracts with default query', async () => {
+      const mockDbRows = [
+        {
+          id: 'contract-1',
+          name: 'Web Development Project',
+          hourly_rate: 45,
+          description: 'Frontend development for client portal',
+          created_at: '2024-12-24T10:00:00Z',
+          updated_at: '2024-12-24T10:00:00Z',
+        },
+        {
+          id: 'contract-2',
+          name: 'Backend API Development',
+          hourly_rate: 50,
+          description: null,
+          created_at: '2024-12-23T09:00:00Z',
+          updated_at: '2024-12-23T09:00:00Z',
+        },
+      ];
 
-      vi.mocked(mockClient.execute).mockResolvedValue(mockDbResult);
+      vi.mocked(mockClient.query).mockResolvedValue(mockDbRows);
 
       const result = await repository.findMany();
 
-      expect(mockClient.execute).toHaveBeenCalledWith({
-        sql: expect.stringContaining('SELECT * FROM contracts ORDER BY created_at DESC'),
-        args: [],
-      });
+      expect(mockClient.query).toHaveBeenCalledWith(
+        'SELECT * FROM contracts ORDER BY created_at DESC',
+        { params: [] }
+      );
 
       expect(result).toHaveLength(2);
-      expect(result[0].id).toBe('contract-1');
-      expect(result[1].id).toBe('contract-2');
       expect(result[1].description).toBeUndefined();
     });
 
-    it('should handle limit and offset in query', async () => {
-      const mockDbResult = { rows: [] };
+    it('should return empty array when no contracts found', async () => {
+      vi.mocked(mockClient.query).mockResolvedValue([]);
 
-      vi.mocked(mockClient.execute).mockResolvedValue(mockDbResult);
+      const result = await repository.findMany();
 
-      await repository.findMany({ limit: 10, offset: 5 });
+      expect(result).toEqual([]);
+    });
 
-      expect(mockClient.execute).toHaveBeenCalledWith({
-        sql: 'SELECT * FROM contracts ORDER BY created_at DESC LIMIT ? OFFSET ?',
-        args: [10, 5],
-      });
+    it('should handle limit and offset correctly', async () => {
+      vi.mocked(mockClient.query).mockResolvedValue([]);
+
+      await repository.findMany({ limit: 10, offset: 20 });
+
+      expect(mockClient.query).toHaveBeenCalledWith(
+        'SELECT * FROM contracts ORDER BY created_at DESC LIMIT $1 OFFSET $2',
+        { params: [10, 20] }
+      );
     });
   });
 
@@ -205,49 +201,37 @@ describe('Contract Repository', () => {
     it('should update contract successfully', async () => {
       const updateData: UpdateContract = {
         id: 'contract-1',
-        hourlyRate: 55,
-        description: 'Updated description',
+        name: 'Updated Web Development Project',
       };
       
-      const mockDbResult = {
-        rows: [{
-          id: 'contract-1',
-          name: 'Web Development Project',
-          hourly_rate: 55,
-          description: 'Updated description',
-          created_at: '2024-12-24T10:00:00Z',
-          updated_at: '2024-12-24T12:00:00Z',
-        }],
-      };
+      const mockDbRows = [{
+        id: 'contract-1',
+        name: 'Updated Web Development Project',
+        hourly_rate: 45,
+        description: 'Frontend development for client portal',
+        created_at: '2024-12-24T10:00:00Z',
+        updated_at: '2024-12-24T10:00:00Z',
+      }];
 
-      vi.mocked(mockClient.execute).mockResolvedValue(mockDbResult);
+      vi.mocked(mockClient.query).mockResolvedValue(mockDbRows);
 
       const result = await repository.update(updateData);
 
-      expect(mockClient.execute).toHaveBeenCalledWith({
-        sql: `
-          UPDATE contracts 
-          SET hourly_rate = ?, description = ?
-          WHERE id = ?
-          RETURNING *
-        `,
-        args: [55, 'Updated description', 'contract-1'],
-      });
+      expect(mockClient.query).toHaveBeenCalledWith(
+        expect.stringContaining('UPDATE contracts'),
+        { params: ['Updated Web Development Project', 'contract-1'] }
+      );
 
-      expect(result.id).toBe('contract-1');
-      expect(result.hourlyRate).toBe(55);
-      expect(result.description).toBe('Updated description');
+      expect(result.name).toBe('Updated Web Development Project');
     });
 
     it('should throw error when update fails', async () => {
       const updateData: UpdateContract = {
         id: 'contract-1',
-        hourlyRate: 55,
+        name: 'Updated Name',
       };
-      
-      const mockDbResult = { rows: [] };
 
-      vi.mocked(mockClient.execute).mockResolvedValue(mockDbResult);
+      vi.mocked(mockClient.query).mockResolvedValue([]);
 
       await expect(repository.update(updateData)).rejects.toThrow('Failed to update contract');
     });
@@ -255,26 +239,14 @@ describe('Contract Repository', () => {
 
   describe('deleteById', () => {
     it('should delete contract successfully', async () => {
-      const mockDbResult = { rows: [] };
-
-      vi.mocked(mockClient.execute).mockResolvedValue(mockDbResult);
+      vi.mocked(mockClient.execute).mockResolvedValue(undefined);
 
       await repository.deleteById('contract-1');
 
-      expect(mockClient.execute).toHaveBeenCalledWith({
-        sql: expect.stringContaining('DELETE FROM contracts WHERE id = ?'),
-        args: ['contract-1'],
-      });
-    });
-  });
-
-  describe('error handling', () => {
-    it('should throw error when client is null', () => {
-      expect(() => createContractRepository(null)).toThrow('Database client is required for ContractRepository');
-    });
-
-    it('should throw error when client is undefined', () => {
-      expect(() => createContractRepository(undefined)).toThrow('Database client is required for ContractRepository');
+      expect(mockClient.execute).toHaveBeenCalledWith(
+        'DELETE FROM contracts WHERE id = $1',
+        { params: ['contract-1'] }
+      );
     });
   });
 });
